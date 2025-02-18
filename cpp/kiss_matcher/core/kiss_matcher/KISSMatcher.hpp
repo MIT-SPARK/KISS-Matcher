@@ -44,7 +44,10 @@ struct KISSMatcherConfig {
   float robin_noise_bound_      = voxel_size_ * robin_noise_bound_gain_;
 
   // matching params
-  bool use_ratio_test_    = false;
+  // NOTE(hlim): For better usability for map-level registration, I set `true` as a default
+  // Enabling `use_ratio_test_` may cause a slight slowdown,
+  // and its impact is insignificant at the scan level.
+  bool use_ratio_test_    = true;
   std::string robin_mode_ = "max_core";
   float tuple_scale_      = 0.95;
   int num_max_corr_       = 5000;
