@@ -37,7 +37,14 @@ cd ${MAIN_DIR_OF_KISS_MATCHER_REPOSITORY}
 bash shellscripts/install_teaserpp.sh
 ```
 
-If you 
+Then, **please** run
+
+```
+sudo ldconfig
+```
+
+❓ Why is `sudo ldconfig` needed?: Because both ROBIN and TEASER++ have a dependency on [pmc](https://github.com/jingnanshi/pmc). Without `sudo ldconfig`, you might see [error while loading shared libraries: libpmc.so](https://github.com/MIT-SPARK/KISS-Matcher/issues/14) error.
+
 
 ## :gear: How To Build & RUN
 
