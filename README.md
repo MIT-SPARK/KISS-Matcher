@@ -152,3 +152,14 @@ we envision KISS-Matcher as a community-driven project, we love to see how the p
 <a href="https://github.com/PRBonn/kiss-icp/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=MIT-SPARK/KISS-Matcher" />
 </a>
+
+
+## Acknowledgements
+
+We sincerely express our gratitude to [Prof. Cyrill Stachniss’ group](https://www.ipb.uni-bonn.de/index.html) at the University of Bonn for their generosity in allowing us to use the term *KISS*.
+In particular, I (Hyungtae Lim) personally deeply appreciate [Tizziano Guadagnino](https://scholar.google.com/citations?user=5m73YFQAAAAJ&hl=it), [Benedikt Mersch](https://scholar.google.com/citations?user=XwuAB1sAAAAJ&hl=en), [Louis Wiesmann](https://scholar.google.de/citations?user=EEyCOpIAAAAJ&hl=de), and [Jens Behley](https://jbehley.github.io/) for their kind support and collaboration during my time at the University of Bonn.
+Without them, KISS-Matcher would not exist today. A special thanks goes to my co-author, [Nacho](https://github.com/nachovizzo), for taking the time to thoroughly teach me modern C++ and modern CMake.
+We would also like to express our gratitude to [Kenji Koide](https://staff.aist.go.jp/k.koide/) for his exceptional effort in open-sourcing the wonderful open source, [small_gicp](https://github.com/koide3/small_gicp), which plays a crucial role in enhancing the efficiency of our pipeline.
+His dedication to the research community continues to inspire and enable advancements in the field.
+
+Again, their generosity, expertise, and contributions have greatly enriched our work, and we are truly grateful for their support.
