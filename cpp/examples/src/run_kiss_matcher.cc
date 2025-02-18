@@ -55,16 +55,19 @@ int main(int argc, char** argv) {
   std::cout << "\033[1;32mLoad complete!\033[0m\n";
 
   kiss_matcher::KISSMatcherConfig config = kiss_matcher::KISSMatcherConfig(resolution);
-  // NOTE(hlim):
-  // If the rotation is predominantly around the yaw axis, set `use_quatro_` to true.
-  // Otherwise, set `false`; then, the SO(3)-based GNC will be activated.
-  // e.g., in case of `VBR-Collosseo`, it should be set as `false`.
-  config.use_quatro_ = true;
-
-  // NOTE(hlim):
-  // If dealing with a map-level point cloud, setting `use_ratio_test_` to true helps
-  // reject redundant features in advance, reducing matching time and filtering outliers early.
-  config.use_ratio_test_ = true;
+  // NOTE(hlim): Two important parameters for enhancing performance
+  // 1. `config.use_quatro_ (default: false)`
+  // If the rotation is predominantly around the yaw axis, set `use_quatro_` to true like:
+  // config.use_quatro_ = true;
+  // Otherwise, the default mode activates SO(3)-based GNC.
+  // E.g., in the case of `VBR-Collosseo`, it should be set as `false`.
+  //
+  // 2. `config.use_ratio_test_ (default: true)`
+  // If dealing with a scan-level point cloud, the impact of `use_ratio_test_` is insignificant.
+  // Plus, setting `use_ratio_test_` to false helps speed up slightly
+  // If you want to try your own scan at a scan-level or loop closing situation,
+  // setting `false` boosts the inference speed.
+  // config.use_ratio_test_ = false;
   kiss_matcher::KISSMatcher matcher(config);
 
   const auto solution = matcher.estimate(src_vec, tgt_vec);
