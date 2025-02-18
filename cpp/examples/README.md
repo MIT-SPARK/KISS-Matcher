@@ -81,9 +81,6 @@ cmake .. -DCMAKE_BUILD_TYPE=Release && make -j 48
 ./run_kiss_matcher <src_pcd_file> <tgt_pcd_file> <resolution> <yaw_aug_angle (Optional)>
 ```
 
-<details>
-  <summary><strong>Click to see our detailed example codes</a></strong></summary>
-
 ### Example B-0. Perform registration two point clouds from different viewpoints of Velodyne 16 at MIT campus
 
 ```
@@ -118,7 +115,7 @@ cmake .. -DCMAKE_BUILD_TYPE=Release && make -j 48
 ### Example B-3. Perform registration KITTI00 (Orange) and KITTI360-09 (Cyan) map clouds
 
 ```
-./run_kiss_matcher data/KITTI00-to-07/kitti07.pcd data/KITTI00-to-07/kitti00.pcd 2.0
+./run_kiss_matcher data/KITTI00-to-KITTI360/kitti00.pcd data/KITTI00-to-KITTI360/kitti360_09.pcd 2.0
 ```
 
 **Result**
@@ -166,7 +163,7 @@ config.use_quatro_ = false;
 and then `make -j 48` again to re-build `run_kiss_matcher`. Then, run the below command:
 
 ```
-./run_kiss_matcher data/VBR-Collosseo/test0.pcd data/VBR-Collosseo/train.pcd 2.0
+./run_kiss_matcher data/VBR-Collosseo/test0.pcd data/VBR-Collosseo/train0.pcd 2.0
 ```
 
 **Result**
@@ -174,9 +171,9 @@ and then `make -j 48` again to re-build `run_kiss_matcher`. Then, run the below 
 ![Image](https://github.com/user-attachments/assets/2e84608e-b1c8-4706-8ea9-f1149697cc4b)
 
 
-</details>
-
 > :warning: We have confirmed that the PCL visualizer triggers a segmentation fault when no GPU is available. In this case, all warped clouds are saved as ${SRC_NAME}_warped.pcd, and we recommend using other visualization tools, such as CloudCompare, for visualization.
+
+---
 
 ### Example C. TBU
 
