@@ -19,6 +19,7 @@ FetchContent_MakeAvailable(pybind11)
 
 set(PYBIND11_NEWPYTHON ON)
 find_package(Python COMPONENTS Interpreter Development.Module REQUIRED)
+# find_package(pybind11 CONFIG REQUIRED)
 
 if (DEFINED SKBUILD)
     message(STATUS "Building with Scikit-Build")
@@ -30,6 +31,7 @@ if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cpp/kiss_matcher/)
 else()
   cmake_minimum_required(VERSION 3.18)
   message(STATUS "Performing out-of-tree build, fetching KISS-Matcher v${CMAKE_PROJECT_VERSION} Release from Github")
+  include(FetchContent)
   FetchContent_Declare(
     ext_kiss_matcher_core PREFIX kiss_matcher
     URL https://github.com/LimHyungTae/kiss-matcher/archive/refs/tags/v0.3.1.tar.gz SOURCE_SUBDIR
@@ -37,23 +39,26 @@ else()
   FetchContent_MakeAvailable(ext_kiss_matcher_core)
 endif()
 
-pybind11_add_module(kiss_matcher_pybind MODULE kiss_matcher/pybind/kiss_matcher_pybind.cpp)
-target_link_libraries(kiss_matcher_pybind PUBLIC kiss_matcher_core)
+set(OUTPUT_MODULE_NAME kiss_matcher)
+
+pybind11_add_module(${OUTPUT_MODULE_NAME} kiss_matcher/pybind/kiss_matcher_pybind.cpp)
+target_link_libraries(${OUTPUT_MODULE_NAME} PUBLIC kiss_matcher_core)
 
 # To ignore warning messages
-target_compile_options(kiss_matcher_pybind PRIVATE
+target_compile_options(${OUTPUT_MODULE_NAME} PRIVATE
     $<$<CXX_COMPILER_ID:GNU>:-w>
     $<$<CXX_COMPILER_ID:Clang>:-w>
     $<$<CXX_COMPILER_ID:MSVC>:/w>
 )
 
-install(TARGETS kiss_matcher_pybind DESTINATION .)
-
 # fix for clang
 # see: https://github.com/pybind/pybind11/issues/1818
 if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-  target_compile_options(kiss_matcher_pybind PUBLIC -fsized-deallocation)
+  target_compile_options(${OUTPUT_MODULE_NAME} PUBLIC -fsized-deallocation)
 endif ()
+
+install(TARGETS ${OUTPUT_MODULE_NAME} DESTINATION .)
+
 
 
 # add_subdirectory(kiss_matcher/pybind)
