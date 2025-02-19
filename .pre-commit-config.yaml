@@ -1,3 +1,6 @@
+ci:
+  autofix: true
+
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v4.4.0
@@ -11,16 +14,40 @@ repos:
       - id: check-added-large-files
       - id: check-merge-conflict
 
-  - repo: https://github.com/psf/black
-    rev: "23.7.0"
+  ######################################################################
+  # Python Formatting
+  ######################################################################
+  # For Python import sorting
+  - repo: https://github.com/pycqa/isort
+    rev: "5.12.0"
     hooks:
-      - id: black
+      - id: isort
 
-  # - repo: https://github.com/pylint-dev/pylint
-  #   rev: "v3.0.0a6"
-  #   hooks:
-  #     - id: pylint
+  # Yet Another Python Formatter
+  - repo: https://github.com/pre-commit/mirrors-yapf
+    rev: v0.32.0
+    hooks:
+      - id: yapf
+        additional_dependencies: [toml]
 
+  - repo: https://github.com/PyCQA/flake8
+    rev: 5.0.4
+    hooks:
+      - id: flake8
+        exclude: 'python/utils/download_datasets'
+
+  ######################################################################
+  # Markdown Formatting
+  ######################################################################
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 0.7.9
+    hooks:
+      - id: mdformat
+        exclude: 'github/'
+
+  ######################################################################
+  # C++ Formatting
+  ######################################################################
   - repo: https://github.com/pre-commit/mirrors-clang-format
     rev: "v16.0.6"
     hooks:
