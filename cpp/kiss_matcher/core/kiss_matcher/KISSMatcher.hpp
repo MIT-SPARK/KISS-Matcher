@@ -76,8 +76,10 @@ struct KISSMatcherConfig {
     }
 
     if (robin_noise_bound_gain < solver_noise_bound_gain) {
-      throw std::runtime_error(
-          "`solver_noise_bound_gain` should be smaller than `robin_noise_bound_gain`.");
+      throw std::runtime_error("`solver_noise_bound_gain` (" +
+                               std::to_string(solver_noise_bound_gain) +
+                               ") should be smaller than or equal to `robin_noise_bound_gain` (" +
+                               std::to_string(robin_noise_bound_gain) + ").");
     }
 
     voxel_size_         = voxel_size;
