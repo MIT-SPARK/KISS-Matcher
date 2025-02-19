@@ -10,6 +10,9 @@ include(GNUInstallDirs)
 include(3rdparty/find_dependencies.cmake)
 include(cmake/CompilerOptions.cmake)
 
+# NOTE(hlim): Without this line, pybinded KISS-Matcher does not work
+find_library(LZ4_LIBRARY lz4 REQUIRED)
+
 set(CMAKE_BUILD_TYPE "Release")
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -36,7 +39,7 @@ add_library(${TARGET_NAME} STATIC
 )
 
 target_link_libraries(${TARGET_NAME}
-    PUBLIC Eigen3::Eigen robin::robin ${OpenMP_LIBS} ${EIGEN3_LIBS} TBB::tbb
+    PUBLIC Eigen3::Eigen robin::robin ${OpenMP_LIBS} ${EIGEN3_LIBS} TBB::tbb ${LZ4_LIBRARY}
 )
 
 # To make kiss_matcher::core global for Pybinding
