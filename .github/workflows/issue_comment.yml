@@ -1,0 +1,33 @@
+name: Auto Comment on Short Issues
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  comment_on_short_issue:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check issue body length
+        id: check_length
+        run: |
+          BODY="${{ github.event.issue.body }}"
+          LENGTH=$(echo "$BODY" | wc -c)
+          if [ "$LENGTH" -lt 80 ]; then
+            echo "short=true" >> $GITHUB_ENV
+          else
+            echo "short=false" >> $GITHUB_ENV
+          fi
+
+      - name: Comment on short issue
+        if: env.short == 'true'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: "👋 Thanks for your issue! However, it looks too short to help you in details. Could you provide more details such as:\n\n- A clear description of the problem\n- Steps to reproduce\n- Expected vs. actual behavior\n- Your environment (OS, software version, etc.)\n\nThis will help us investigate the issue effectively. Thanks! 🚀"
+            })
