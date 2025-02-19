@@ -160,7 +160,7 @@ If you use this library for any academic work, please cite our original [paper](
 Like [KISS-ICP](https://github.com/PRBonn/kiss-icp),
 we envision KISS-Matcher as a community-driven project, we love to see how the project is growing thanks to the contributions from the community. We would love to see your face in the list below, just open a Pull Request!
 
-<a href="https://github.com/PRBonn/kiss-icp/graphs/contributors">
+<a href="https://github.com/MIT-SPARK/KISS-Matcher/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=MIT-SPARK/KISS-Matcher" />
 </a>
 
