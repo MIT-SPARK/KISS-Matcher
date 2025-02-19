@@ -64,7 +64,19 @@ See [CMakeLists.txt](https://github.com/MIT-SPARK/KISS-Matcher/blob/main/cpp/exa
 
 ### Python
 
-It should work. TBU.
+The prerequisites for Pybind11 are just the minimum requirements as follows:"
+
+```
+pip3 install --upgrade pip setuptools wheel scikit-build-core ninja cmake build
+```
+
+And then, run the following command:
+
+```
+pip3 install -e python/
+```
+
+We also provide out-of-the-box python registration examples. Go to [**python**](https://github.com/MIT-SPARK/KISS-Matcher/tree/main/python) directory and follow the instructions.
 
 ---
 

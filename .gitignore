@@ -31,6 +31,9 @@ cpp/kiss_matcher/CMakeFiles/
 cpp/kiss_matcher/.idea/
 cpp/kiss_matcher/.vscode/
 
+*/data/
+*/zip_files/
+
 compile_commands.json
 */compile_commands.json
 
