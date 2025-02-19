@@ -13,10 +13,9 @@
   <p><strong><em>Keep it simple, make it scalable.</em></strong></p>
 </div>
 
----
+______________________________________________________________________
 
 # Installation
-
 
 The prerequisites for Pybind11 are just the minimum requirements as follows:"
 

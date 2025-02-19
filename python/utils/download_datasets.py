@@ -1,8 +1,7 @@
 import os
-import urllib.request
 import shutil
+import urllib.request
 import zipfile
-
 
 DATA_DIR = os.path.join(os.getcwd(), "data")
 ZIP_DIR = os.path.join(os.getcwd(), "zip_files")
@@ -54,7 +53,8 @@ def main():
         if dest_file.endswith(".zip"):
             extract_zip(dest_file, DATA_DIR)
         else:
-            os.replace(dest_file, os.path.join(DATA_DIR, os.path.basename(dest_file)))
+            os.replace(dest_file,
+                       os.path.join(DATA_DIR, os.path.basename(dest_file)))
 
     # Remove `ZIP_DIR` directory
     shutil.rmtree(ZIP_DIR, ignore_errors=True)
