@@ -104,7 +104,7 @@ if __name__ == "__main__":
 
     num_rot_inliers = matcher.get_num_rotation_inliers()
     num_final_inliers = matcher.get_num_final_inliers()
-    # NOTE(hlim): By checking the final inliers, we can determine whether 
+    # NOTE(hlim): By checking the final inliers, we can determine whether
     # the registration was successful or not. The larger the threshold,
     # the more conservatively the decision is made.
     # See https://github.com/MIT-SPARK/KISS-Matcher/issues/24

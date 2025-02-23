@@ -90,10 +90,10 @@ int main(int argc, char** argv) {
 
   matcher.print();
 
-  size_t num_rot_inliers = matcher.getNumRotationInliers();
+  size_t num_rot_inliers   = matcher.getNumRotationInliers();
   size_t num_final_inliers = matcher.getNumFinalInliers();
 
-  // NOTE(hlim): By checking the final inliers, we can determine whether 
+  // NOTE(hlim): By checking the final inliers, we can determine whether
   // the registration was successful or not. The larger the threshold,
   // the more conservatively the decision is made.
   // See https://github.com/MIT-SPARK/KISS-Matcher/issues/24

@@ -51,9 +51,9 @@ class ROBINMatching {
 
   // For a deeper understanding, please refer to Section III.D
   // ttps://arxiv.org/pdf/2409.15615
-  std::vector<size_t> applyOutlierPruning(const std::vector<Eigen::Vector3f> &src_matched,
-                           const std::vector<Eigen::Vector3f> &tgt_matched,
-                           const std::string& robin_mode="max_core");
+  std::vector<size_t> applyOutlierPruning(const std::vector<Eigen::Vector3f>& src_matched,
+                                          const std::vector<Eigen::Vector3f>& tgt_matched,
+                                          const std::string& robin_mode = "max_core");
 
   inline std::vector<std::pair<int, int>> getCrossCheckedCorrespondences() {
     std::vector<std::pair<int, int>> corres_out;
@@ -72,7 +72,6 @@ class ROBINMatching {
     return corres_cross_checked_;
   }
 
-  
   inline std::vector<std::pair<int, int>> getFinalCorrespondences() { return corres_; }
 
   double getRejectionTime() { return rejection_time_; }
@@ -123,9 +122,8 @@ class ROBINMatching {
   // ttps://arxiv.org/pdf/2409.15615
   void applyOutlierPruning(const std::vector<std::pair<int, int>>& corres,
                            std::vector<std::pair<int, int>>& corres_out,
-                           const std::string& robin_mode="max_core");
+                           const std::string& robin_mode = "max_core");
 
-  
   std::vector<std::pair<int, int>> corres_cross_checked_;
   std::vector<std::pair<int, int>> corres_;
   std::vector<std::vector<Eigen::Vector3f>> pointcloud_;

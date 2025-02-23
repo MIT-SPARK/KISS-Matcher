@@ -111,11 +111,12 @@ PYBIND11_MODULE(kiss_matcher, m) {
       .def("get_num_rotation_inliers",
            &KISSMatcher::getNumRotationInliers,
            "Get # of rotation inliers")
-      .def("get_num_final_inliers",
-           &KISSMatcher::getNumFinalInliers,
-           "Get # of translation inliers")
+      .def(
+          "get_num_final_inliers", &KISSMatcher::getNumFinalInliers, "Get # of translation inliers")
       .def("clear", &KISSMatcher::clear, "Clear internal states")
-      .def("get_processing_time", &KISSMatcher::getProcessingTime, "Get processing (i.e., voxelization) time")
+      .def("get_processing_time",
+           &KISSMatcher::getProcessingTime,
+           "Get processing (i.e., voxelization) time")
       .def("get_extraction_time", &KISSMatcher::getExtractionTime, "Get feature extraction time")
       .def("get_rejection_time", &KISSMatcher::getRejectionTime, "Get outlier rejection time")
       .def("get_matching_time", &KISSMatcher::getMatchingTime, "Get matching time")
