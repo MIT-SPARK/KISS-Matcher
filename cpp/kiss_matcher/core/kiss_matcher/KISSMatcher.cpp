@@ -61,12 +61,12 @@ kiss_matcher::KeypointPair KISSMatcher::match(const std::vector<Eigen::Vector3f>
 
   faster_pfh_->setInputCloud(src_processed_);
   // Note(hlim) Some erroneous points are filtered out
-  // Thus, # of `src_keypoints_` <= `src_voxelized`
+  // Thus, # of `src_keypoints_` <= `src_processed_`
   faster_pfh_->ComputeFeature(src_keypoints_, src_descriptors_);
 
   faster_pfh_->setInputCloud(tgt_processed_);
   // Note(hlim) Some erroneous points are filtered out
-  // Thus, # of `tgt_keypoints_` <= `tgt_voxelized`
+  // Thus, # of `tgt_keypoints_` <= `tgt_processed_`
   faster_pfh_->ComputeFeature(tgt_keypoints_, tgt_descriptors_);
 
   auto t_mid = std::chrono::high_resolution_clock::now();
