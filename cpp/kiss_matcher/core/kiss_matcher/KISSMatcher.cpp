@@ -116,7 +116,6 @@ kiss_matcher::KeypointPair KISSMatcher::match(const Eigen::Matrix<double, 3, Eig
 
 kiss_matcher::RegistrationSolution KISSMatcher::estimate(const std::vector<Eigen::Vector3f> &src,
                                                          const std::vector<Eigen::Vector3f> &tgt) {
-  resetSolver();
   const auto &[src_matched, tgt_matched] = match(src, tgt);
   size_t M                               = src_matched.size();
 
@@ -141,6 +140,7 @@ RegistrationSolution KISSMatcher::solve(
     return solver_->getSolution();
   }
 
+  resetSolver();
   std::chrono::steady_clock::time_point t_start = std::chrono::steady_clock::now();
   solver_->solve(src_matched, tgt_matched);
   std::chrono::steady_clock::time_point t_end = std::chrono::steady_clock::now();
