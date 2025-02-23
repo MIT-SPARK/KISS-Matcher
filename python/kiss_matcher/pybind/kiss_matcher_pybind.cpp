@@ -96,6 +96,19 @@ PYBIND11_MODULE(kiss_matcher, m) {
            "tgt"_a,
            "Match keypoints from Eigen matrices")
       .def("estimate", &KISSMatcher::estimate, "src"_a, "tgt"_a, "Estimate transformation")
+      .def("solve",
+           &KISSMatcher::solve,
+           "src_matched"_a,
+           "tgt_matched"_a,
+           "Estimate relative pose given already matched point clouds")
+      .def("prune_and_solve",
+           &KISSMatcher::pruneAndSolve,
+           "src_matched"_a,
+           "tgt_matched"_a,
+           "Prune correspondences and estimate relative pose given already matched point clouds")
+      .def("get_processed_input_clouds",
+           &KISSMatcher::getProcessedInputClouds,
+           "Get processed (i.e., voxelization) point clouds")
       .def("get_keypoints_from_faster_pfh",
            &KISSMatcher::getKeypointsFromFasterPFH,
            "Get keypoints from FasterPFH")
