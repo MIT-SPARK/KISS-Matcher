@@ -117,10 +117,6 @@ struct KISSMatcherConfig {
 
 class KISSMatcher {
  public:
-  std::unique_ptr<FasterPFH> faster_pfh_;
-  std::unique_ptr<ROBINMatching> robin_matching_;
-  std::unique_ptr<RobustRegistrationSolver> solver_;
-
   explicit KISSMatcher(const float &voxel_size);
 
   explicit KISSMatcher(const KISSMatcherConfig &config);
@@ -180,6 +176,10 @@ class KISSMatcher {
 
  private:
   KISSMatcherConfig config_;
+
+  std::unique_ptr<FasterPFH> faster_pfh_;
+  std::unique_ptr<ROBINMatching> robin_matching_;
+  std::unique_ptr<RobustRegistrationSolver> solver_;
 
   std::vector<Eigen::Vector3f> src_keypoints_;
   std::vector<Eigen::Vector3f> tgt_keypoints_;
