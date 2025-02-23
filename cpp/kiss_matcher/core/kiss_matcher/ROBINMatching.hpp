@@ -49,7 +49,12 @@ class ROBINMatching {
       float tuple_scale   = 0.95,
       bool use_ratio_test = false);
 
-  std::vector<std::pair<int, int>> getCrossCheckedCorrespondences() {
+  // For a deeper understanding, please refer to Section III.D
+  // ttps://arxiv.org/pdf/2409.15615
+  std::vector<size_t> applyOutlierPruning(const std::vector<Eigen::Vector3f> &src_matched,
+                           const std::vector<Eigen::Vector3f> &tgt_matched,
+                           const std::string& robin_mode="max_core");
+
   inline std::vector<std::pair<int, int>> getCrossCheckedCorrespondences() {
     std::vector<std::pair<int, int>> corres_out;
     corres_out.reserve(corres_cross_checked_.size());
