@@ -138,11 +138,11 @@ class KISSMatcher {
 
   KeypointPair getKeypointsFromInitialMatching();
 
-  std::vector<std::pair<int, int>> getInitialCorrespondences() {
+  inline std::vector<std::pair<int, int>> getInitialCorrespondences() {
     return robin_matching_->getCrossCheckedCorrespondences();
   }
 
-  std::vector<std::pair<int, int>> getFinalCorrespondences() {
+  inline std::vector<std::pair<int, int>> getFinalCorrespondences() {
     return robin_matching_->getFinalCorrespondences();
   }
 
