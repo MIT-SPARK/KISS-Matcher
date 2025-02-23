@@ -162,11 +162,11 @@ class KISSMatcher {
   /**
    * @brief Estimates the transformation between source and target point clouds.
    * @param src Source point cloud.
-   * @param dst Target point cloud.
+   * @param tgt Target point cloud.
    * @return The estimated registration solution.
    */
   RegistrationSolution estimate(const std::vector<Eigen::Vector3f> &src,
-                                const std::vector<Eigen::Vector3f> &dst);
+                                const std::vector<Eigen::Vector3f> &tgt);
 
   /**
    * @brief Retrieves input point clouds of FasterPFH.

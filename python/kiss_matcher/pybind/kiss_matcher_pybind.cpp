@@ -95,7 +95,7 @@ PYBIND11_MODULE(kiss_matcher, m) {
            "src"_a,
            "tgt"_a,
            "Match keypoints from Eigen matrices")
-      .def("estimate", &KISSMatcher::estimate, "src"_a, "dst"_a, "Estimate transformation")
+      .def("estimate", &KISSMatcher::estimate, "src"_a, "tgt"_a, "Estimate transformation")
       .def("get_keypoints_from_faster_pfh",
            &KISSMatcher::getKeypointsFromFasterPFH,
            "Get keypoints from FasterPFH")
