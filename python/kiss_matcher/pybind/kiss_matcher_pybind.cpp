@@ -47,38 +47,6 @@ PYBIND11_MODULE(kiss_matcher, m) {
   m.doc()               = "Pybind11 bindings for KISSMatcher library";
   m.attr("__version__") = "0.3.1";
 
-  // auto vector3fvector = pybind_eigen_vector_of_vector<Eigen::Vector3f>(
-  //     m,
-  //     "_Vector3fVector",
-  //     "std::vector<Eigen::Vector3f>",
-  //     py::py_array_to_vectors_float<Eigen::Vector3f>);
-
-  // auto vector3dvector = pybind_eigen_vector_of_vector<Eigen::Vector3d>(
-  //     m,
-  //     "_Vector3dVector",
-  //     "std::vector<Eigen::Vector3d>",
-  //     py::py_array_to_vectors_double<Eigen::Vector3d>);
-
-  // Bind KISSMatcherConfig
-  // py::class_<KISSMatcherConfig>(m, "KISSMatcherConfig")
-  //     .def(py::init<float, bool, float, int, float, float, float, float>(),
-  //          "voxel_size"_a              = 0.3,
-  //          "use_quatro"_a              = false,
-  //          "thr_linearity"_a           = 1.0,
-  //          "num_max_corr"_a            = 5000,
-  //          "normal_r_gain"_a           = 3.0,
-  //          "fpfh_r_gain"_a             = 5.0,
-  //          "robin_noise_bound_gain"_a  = 1.0,
-  //          "solver_noise_bound_gain"_a = 0.75)
-  //     .def_readwrite("voxel_size", &KISSMatcherConfig::voxel_size_)
-  //     .def_readwrite("normal_radius", &KISSMatcherConfig::normal_radius_)
-  //     .def_readwrite("fpfh_radius", &KISSMatcherConfig::fpfh_radius_)
-  //     .def_readwrite("thr_linearity", &KISSMatcherConfig::thr_linearity_)
-  //     .def_readwrite("robin_noise_bound_gain", &KISSMatcherConfig::robin_noise_bound_gain_)
-  //     .def_readwrite("solver_noise_bound_gain", &KISSMatcherConfig::solver_noise_bound_gain_)
-  //     .def_readwrite("num_max_corr", &KISSMatcherConfig::num_max_corr_)
-  //     .def_readwrite("use_quatro", &KISSMatcherConfig::use_quatro_);
-
   py::class_<KISSMatcherConfig>(m, "KISSMatcherConfig")
       .def(py::init<float, bool, bool, float, int, float, float, float, float, bool>(),
            "voxel_size"_a                  = 0.3,
@@ -118,14 +86,14 @@ PYBIND11_MODULE(kiss_matcher, m) {
       .def("match",
            py::overload_cast<const std::vector<Eigen::Vector3f> &,
                              const std::vector<Eigen::Vector3f> &>(&KISSMatcher::match),
-           "src_voxelized"_a,
-           "tgt_voxelized"_a,
+           "src"_a,
+           "tgt"_a,
            "Match keypoints from source and target")
       .def("match",
            py::overload_cast<const Eigen::Matrix<double, 3, Eigen::Dynamic> &,
                              const Eigen::Matrix<double, 3, Eigen::Dynamic> &>(&KISSMatcher::match),
-           "src_voxelized"_a,
-           "tgt_voxelized"_a,
+           "src"_a,
+           "tgt"_a,
            "Match keypoints from Eigen matrices")
       .def("estimate", &KISSMatcher::estimate, "src"_a, "dst"_a, "Estimate transformation")
       .def("get_keypoints_from_faster_pfh",
@@ -140,7 +108,14 @@ PYBIND11_MODULE(kiss_matcher, m) {
       .def("get_final_correspondences",
            &KISSMatcher::getFinalCorrespondences,
            "Get final correspondences")
+      .def("get_num_rotation_inliers",
+           &KISSMatcher::getNumRotationInliers,
+           "Get # of rotation inliers")
+      .def("get_num_final_inliers",
+           &KISSMatcher::getNumFinalInliers,
+           "Get # of translation inliers")
       .def("clear", &KISSMatcher::clear, "Clear internal states")
+      .def("get_processing_time", &KISSMatcher::getProcessingTime, "Get processing (i.e., voxelization) time")
       .def("get_extraction_time", &KISSMatcher::getExtractionTime, "Get feature extraction time")
       .def("get_rejection_time", &KISSMatcher::getRejectionTime, "Get outlier rejection time")
       .def("get_matching_time", &KISSMatcher::getMatchingTime, "Get matching time")
