@@ -146,6 +146,14 @@ class KISSMatcher {
     return robin_matching_->getFinalCorrespondences();
   }
 
+  inline size_t getNumRotationInliers(){
+    return solver_->getRotationInliers().size();
+  }
+
+  inline size_t getNumFinalInliers(){
+    return solver_->getTranslationInliers().size();
+  }
+
   void clear() {
     src_keypoints_.clear();
     tgt_keypoints_.clear();
