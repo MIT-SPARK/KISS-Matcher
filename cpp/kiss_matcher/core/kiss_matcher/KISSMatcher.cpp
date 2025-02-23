@@ -54,17 +54,17 @@ kiss_matcher::KeypointPair KISSMatcher::match(const std::vector<Eigen::Vector3f>
 
   auto t_init = std::chrono::high_resolution_clock::now();
 
-  const auto &src_input = processInput(src_voxelized);
-  const auto &tgt_input = processInput(tgt_voxelized);
+  src_processed_ = std::move(processInput(src));
+  tgt_processed_ = std::move(processInput(tgt));
 
   auto t_process = std::chrono::high_resolution_clock::now();
 
-  faster_pfh_->setInputCloud(src_input);
+  faster_pfh_->setInputCloud(src_processed_);
   // Note(hlim) Some erroneous points are filtered out
   // Thus, # of `src_keypoints_` <= `src_voxelized`
   faster_pfh_->ComputeFeature(src_keypoints_, src_descriptors_);
 
-  faster_pfh_->setInputCloud(tgt_input);
+  faster_pfh_->setInputCloud(tgt_processed_);
   // Note(hlim) Some erroneous points are filtered out
   // Thus, # of `tgt_keypoints_` <= `tgt_voxelized`
   faster_pfh_->ComputeFeature(tgt_keypoints_, tgt_descriptors_);
