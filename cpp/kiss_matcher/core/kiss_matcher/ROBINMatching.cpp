@@ -143,7 +143,7 @@ void ROBINMatching::match(const std::string& robin_mode, float tuple_scale, bool
   if (robin_mode == "None") {
     runTupleTest(corres_cross_checked_, corres_, tuple_scale);
   } else if (robin_mode == "max_core" || robin_mode == "max_clique") {
-    runTupleTestWithROBIN(corres_cross_checked_, corres_, robin_mode);
+    applyOutlierPruning(corres_cross_checked_, corres_, robin_mode);
   } else {
     std::invalid_argument("Wrong ROBIN mode has come.");
   }
@@ -278,9 +278,9 @@ void ROBINMatching::runTupleTest(const std::vector<std::pair<int, int>>& corres,
   }
 }
 
-void ROBINMatching::runTupleTestWithROBIN(const std::vector<std::pair<int, int>>& corres,
-                                          std::vector<std::pair<int, int>>& corres_out,
-                                          const std::string& robin_mode) {
+void ROBINMatching::applyOutlierPruning(const std::vector<std::pair<int, int>>& corres,
+                                      std::vector<std::pair<int, int>>& corres_out,
+                                      const std::string& robin_mode) {
   if (!corres.empty()) {
     size_t ncorr = corres.size();
     std::vector<bool> is_already_included(ncorr, false);

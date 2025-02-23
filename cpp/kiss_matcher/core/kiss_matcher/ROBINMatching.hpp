@@ -112,7 +112,9 @@ class ROBINMatching {
                     std::vector<std::pair<int, int>>& corres_out,
                     const float tuple_scale);
 
-  void runTupleTestWithROBIN(const std::vector<std::pair<int, int>>& corres,
+  // For a deeper understanding, please refer to Section III.D
+  // ttps://arxiv.org/pdf/2409.15615
+  void applyOutlierPruning(const std::vector<std::pair<int, int>>& corres,
                              std::vector<std::pair<int, int>>& corres_out,
                              const std::string& robin_mode);
 
