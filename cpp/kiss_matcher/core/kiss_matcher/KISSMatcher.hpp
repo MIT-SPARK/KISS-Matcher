@@ -168,9 +168,24 @@ class KISSMatcher {
   RegistrationSolution estimate(const std::vector<Eigen::Vector3f> &src,
                                 const std::vector<Eigen::Vector3f> &tgt);
 
+  /**
+   * @brief Solves for the optimal transformation using matched keypoints.
+   * This function assumes that the correspondences have already been established.
+   * @param src_matched Source keypoints matrix.
+   * @param tgt_matched Target keypoints matrix.
+   * @return The estimated registration solution.
+   */
   RegistrationSolution solve(const Eigen::Matrix<double, 3, Eigen::Dynamic> &src_matched,
                              const Eigen::Matrix<double, 3, Eigen::Dynamic> &tgt_matched);
 
+  /**
+   * @brief Prunes outliers and then solves for registration.
+   * This function applies outlier filtering before estimating the transformation,
+   * and assumes that the correspondences have already been established.
+   * @param src_matched Source point cloud keypoints.
+   * @param tgt_matched Target point cloud keypoints.
+   * @return The estimated registration solution after pruning.
+   */
   RegistrationSolution pruneAndSolve(const std::vector<Eigen::Vector3f> &src_matched,
                                      const std::vector<Eigen::Vector3f> &tgt_matched);
 
