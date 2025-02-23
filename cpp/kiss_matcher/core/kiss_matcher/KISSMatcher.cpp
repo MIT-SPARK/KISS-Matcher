@@ -99,9 +99,8 @@ kiss_matcher::KeypointPair KISSMatcher::match(const std::vector<Eigen::Vector3f>
   return {src_matched_, tgt_matched_};
 }
 
-kiss_matcher::KeypointPair KISSMatcher::match(
-    const Eigen::Matrix<double, 3, Eigen::Dynamic> &src,
-    const Eigen::Matrix<double, 3, Eigen::Dynamic> &tgt) {
+kiss_matcher::KeypointPair KISSMatcher::match(const Eigen::Matrix<double, 3, Eigen::Dynamic> &src,
+                                              const Eigen::Matrix<double, 3, Eigen::Dynamic> &tgt) {
   std::vector<Eigen::Vector3f> src_vec(src.cols());
   std::vector<Eigen::Vector3f> tgt_vec(tgt.cols());
 
@@ -116,9 +115,9 @@ kiss_matcher::KeypointPair KISSMatcher::match(
 }
 
 kiss_matcher::RegistrationSolution KISSMatcher::estimate(const std::vector<Eigen::Vector3f> &src,
-                                                         const std::vector<Eigen::Vector3f> &dst) {
+                                                         const std::vector<Eigen::Vector3f> &tgt) {
   resetSolver();
-  const auto &[src_matched, tgt_matched] = match(src, dst);
+  const auto &[src_matched, tgt_matched] = match(src, tgt);
   size_t M                               = src_matched.size();
 
   Eigen::Matrix<double, 3, Eigen::Dynamic> src_matched_eigen;
@@ -130,19 +129,44 @@ kiss_matcher::RegistrationSolution KISSMatcher::estimate(const std::vector<Eigen
     src_matched_eigen.col(m) << src_matched[m].cast<double>();
     tgt_matched_eigen.col(m) << tgt_matched[m].cast<double>();
   }
+  return solve(src_matched_eigen, tgt_matched_eigen);
+}
 
+RegistrationSolution KISSMatcher::solve(
+    const Eigen::Matrix<double, 3, Eigen::Dynamic> &src_matched,
+    const Eigen::Matrix<double, 3, Eigen::Dynamic> &tgt_matched) {
   // In case of too-few matching pairs,
   // Just return invalid solution with the identity matrix
-  if (M < 2) {
+  if (src_matched.cols() < 2) {
     return solver_->getSolution();
   }
 
   std::chrono::steady_clock::time_point t_start = std::chrono::steady_clock::now();
-  solver_->solve(src_matched_eigen, tgt_matched_eigen);
+  solver_->solve(src_matched, tgt_matched);
   std::chrono::steady_clock::time_point t_end = std::chrono::steady_clock::now();
   solver_time_ = std::chrono::duration_cast<std::chrono::duration<double>>(t_end - t_start).count();
 
   return solver_->getSolution();
+}
+
+RegistrationSolution KISSMatcher::pruneAndSolve(const std::vector<Eigen::Vector3f> &src_matched,
+                                                const std::vector<Eigen::Vector3f> &tgt_matched) {
+  std::vector<std::pair<int, int>> corres, corres_out;
+  for (size_t i = 0; i < src_matched.size(); ++i) {
+    corres.emplace_back(i, i);
+  }
+  const auto &pruned_indices =
+      robin_matching_->applyOutlierPruning(src_matched, tgt_matched, "max_core");
+  size_t num_pruned_corr = pruned_indices.size();
+
+  Eigen::Matrix<double, 3, Eigen::Dynamic> src_eigen(3, num_pruned_corr);
+  Eigen::Matrix<double, 3, Eigen::Dynamic> tgt_eigen(3, num_pruned_corr);
+
+  for (size_t i = 0; i < num_pruned_corr; ++i) {
+    src_eigen.col(i) = src_matched[num_pruned_corr].cast<double>();
+    tgt_eigen.col(i) = tgt_matched[num_pruned_corr].cast<double>();
+  }
+  return solve(src_eigen, tgt_eigen);
 }
 
 double KISSMatcher::getProcessingTime() { return processing_time_; }

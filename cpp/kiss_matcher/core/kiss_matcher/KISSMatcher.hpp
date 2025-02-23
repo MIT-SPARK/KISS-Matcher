@@ -168,33 +168,33 @@ class KISSMatcher {
   RegistrationSolution estimate(const std::vector<Eigen::Vector3f> &src,
                                 const std::vector<Eigen::Vector3f> &tgt);
 
+  RegistrationSolution solve(const Eigen::Matrix<double, 3, Eigen::Dynamic> &src_matched,
+                             const Eigen::Matrix<double, 3, Eigen::Dynamic> &tgt_matched);
+
+  RegistrationSolution pruneAndSolve(const std::vector<Eigen::Vector3f> &src_matched,
+                                     const std::vector<Eigen::Vector3f> &tgt_matched);
+
   /**
    * @brief Retrieves input point clouds of FasterPFH.
    * @note Once, `config_.use_voxel_sampling_` is true, it outputs voxelized clouds
    * @return A pair of nput point clouds.
    */
-  inline KeypointPair getProcessedInputClouds() {
-    return {src_processed_, tgt_processed_};
-  }
+  inline KeypointPair getProcessedInputClouds() { return {src_processed_, tgt_processed_}; }
 
   /**
    * @brief Retrieves keypoints detected from FasterPFH.
-   * @note The number of these keypoints is slightly smaller than 
+   * @note The number of these keypoints is slightly smaller than
    * or equal to the number of processed clouds.
    * @return A pair of keypoints from FasterPFH.
    */
-  inline KeypointPair getKeypointsFromFasterPFH() {
-    return {src_keypoints_, tgt_keypoints_};
-  }
+  inline KeypointPair getKeypointsFromFasterPFH() { return {src_keypoints_, tgt_keypoints_}; }
 
   /**
    * @brief Retrieves keypoints from the initial matching stage.
    * @note This function should be called after `match` function
    * @return A pair of initially matched keypoints.
    */
-  inline KeypointPair getKeypointsFromInitialMatching() {
-    return {src_matched_, tgt_matched_};
-  }
+  inline KeypointPair getKeypointsFromInitialMatching() { return {src_matched_, tgt_matched_}; }
 
   /**
    * @brief Retrieves the initial correspondences before refinement.
@@ -214,22 +214,18 @@ class KISSMatcher {
 
   /**
    * @brief Gets the number of rotation inliers after solving.
-   * @return Number of final rotation inliers from 
+   * @return Number of final rotation inliers from
    * @graduated non-convexity (GNC) solver
    */
-  inline size_t getNumRotationInliers(){
-    return solver_->getRotationInliers().size();
-  }
+  inline size_t getNumRotationInliers() { return solver_->getRotationInliers().size(); }
 
   /**
    * @brief Gets the number of final inliers after solving.
-   * @return Number of final translation inliers from 
+   * @return Number of final translation inliers from
    * @component-wise translation estimation (COTE)
    * @note This number can be used to check whether the optimization is valid.
    */
-  inline size_t getNumFinalInliers(){
-    return solver_->getTranslationInliers().size();
-  }
+  inline size_t getNumFinalInliers() { return solver_->getTranslationInliers().size(); }
 
   void clear() {
     src_processed_.clear();
