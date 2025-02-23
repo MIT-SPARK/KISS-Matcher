@@ -42,8 +42,8 @@ void KISSMatcher::resetSolver() {
   solver_ = std::make_unique<RobustRegistrationSolver>(params);
 }
 
-kiss_matcher::KeypointPair KISSMatcher::match(const std::vector<Eigen::Vector3f> &src_voxelized,
-                                              const std::vector<Eigen::Vector3f> &tgt_voxelized) {
+kiss_matcher::KeypointPair KISSMatcher::match(const std::vector<Eigen::Vector3f> &src,
+                                              const std::vector<Eigen::Vector3f> &tgt) {
   clear();
   auto processInput = [&](const std::vector<Eigen::Vector3f> &input_cloud) {
     if (config_.use_voxel_sampling_) {
@@ -100,17 +100,19 @@ kiss_matcher::KeypointPair KISSMatcher::match(const std::vector<Eigen::Vector3f>
 }
 
 kiss_matcher::KeypointPair KISSMatcher::match(
-    const Eigen::Matrix<double, 3, Eigen::Dynamic> &src_voxelized,
-    const Eigen::Matrix<double, 3, Eigen::Dynamic> &tgt_voxelized) {
-  std::vector<Eigen::Vector3f> src_voxelized_vec(src_voxelized.cols());
-  std::vector<Eigen::Vector3f> tgt_voxelized_vec(tgt_voxelized.cols());
+    const Eigen::Matrix<double, 3, Eigen::Dynamic> &src,
+    const Eigen::Matrix<double, 3, Eigen::Dynamic> &tgt) {
+  std::vector<Eigen::Vector3f> src_vec(src.cols());
+  std::vector<Eigen::Vector3f> tgt_vec(tgt.cols());
 
-  for (int i = 0; i < src_voxelized.cols(); ++i) {
-    src_voxelized_vec[i] = src_voxelized.col(i).cast<float>();
-    tgt_voxelized_vec[i] = tgt_voxelized.col(i).cast<float>();
+  for (size_t i = 0; i < src.cols(); ++i) {
+    src_vec[i] = src.col(i).cast<float>();
+  }
+  for (size_t i = 0; i < tgt.cols(); ++i) {
+    tgt_vec[i] = tgt.col(i).cast<float>();
   }
 
-  return match(src_voxelized_vec, tgt_voxelized_vec);
+  return match(src_vec, tgt_vec);
 }
 
 kiss_matcher::RegistrationSolution KISSMatcher::estimate(const std::vector<Eigen::Vector3f> &src,
@@ -141,30 +143,6 @@ kiss_matcher::RegistrationSolution KISSMatcher::estimate(const std::vector<Eigen
   solver_time_ = std::chrono::duration_cast<std::chrono::duration<double>>(t_end - t_start).count();
 
   return solver_->getSolution();
-}
-
-// Note that those are just filtered point cloud
-kiss_matcher::KeypointPair KISSMatcher::getKeypointsFromFasterPFH() {
-  return {src_keypoints_, tgt_keypoints_};
-}
-
-// Note that it should be called after `match` function
-kiss_matcher::KeypointPair KISSMatcher::getKeypointsFromInitialMatching() {
-  const auto &corr = getInitialCorrespondences();
-
-  std::vector<Eigen::Vector3f> src_matched;
-  std::vector<Eigen::Vector3f> tgt_matched;
-
-  src_matched.resize(corr.size());
-  tgt_matched.resize(corr.size());
-
-  for (size_t i = 0; i < corr.size(); ++i) {
-    auto src_idx   = std::get<0>(corr[i]);
-    auto dst_idx   = std::get<1>(corr[i]);
-    src_matched[i] = src_keypoints_[src_idx];
-    tgt_matched[i] = tgt_keypoints_[dst_idx];
-  }
-  return {src_matched, tgt_matched};
 }
 
 double KISSMatcher::getProcessingTime() { return processing_time_; }
