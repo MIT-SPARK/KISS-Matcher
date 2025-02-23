@@ -169,16 +169,32 @@ class KISSMatcher {
                                 const std::vector<Eigen::Vector3f> &dst);
 
   /**
+   * @brief Retrieves input point clouds of FasterPFH.
+   * @note Once, `config_.use_voxel_sampling_` is true, it outputs voxelized clouds
+   * @return A pair of nput point clouds.
+   */
+  inline KeypointPair getProcessedInputClouds() {
+    return {src_processed_, tgt_processed_};
+  }
+
+  /**
    * @brief Retrieves keypoints detected from FasterPFH.
+   * @note The number of these keypoints is slightly smaller than 
+   * or equal to the number of processed clouds.
    * @return A pair of keypoints from FasterPFH.
    */
-  KeypointPair getKeypointsFromFasterPFH();
+  inline KeypointPair getKeypointsFromFasterPFH() {
+    return {src_keypoints_, tgt_keypoints_};
+  }
 
   /**
    * @brief Retrieves keypoints from the initial matching stage.
+   * @note This function should be called after `match` function
    * @return A pair of initially matched keypoints.
    */
-  KeypointPair getKeypointsFromInitialMatching();
+  inline KeypointPair getKeypointsFromInitialMatching() {
+    return {src_matched_, tgt_matched_};
+  }
 
   /**
    * @brief Retrieves the initial correspondences before refinement.
@@ -216,6 +232,8 @@ class KISSMatcher {
   }
 
   void clear() {
+    src_processed_.clear();
+    tgt_processed_.clear();
     src_keypoints_.clear();
     tgt_keypoints_.clear();
     src_keypoints_.clear();
@@ -249,6 +267,9 @@ class KISSMatcher {
   std::unique_ptr<FasterPFH> faster_pfh_;
   std::unique_ptr<ROBINMatching> robin_matching_;
   std::unique_ptr<RobustRegistrationSolver> solver_;
+
+  std::vector<Eigen::Vector3f> src_processed_;
+  std::vector<Eigen::Vector3f> tgt_processed_;
 
   std::vector<Eigen::Vector3f> src_keypoints_;
   std::vector<Eigen::Vector3f> tgt_keypoints_;
