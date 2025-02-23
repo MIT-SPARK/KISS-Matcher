@@ -106,19 +106,22 @@ int main(int argc, char** argv) {
 
   std::cout << solution_eigen << std::endl;
   std::cout << "=====================================" << std::endl;
-  pcl::transformPointCloud(src_viz, est_viz, solution_eigen);
 
+  // ------------------------------------------------------------
+  // Save warped source cloud
+  // ------------------------------------------------------------
   pcl::PointCloud<pcl::PointXYZ>::Ptr est_cloud(new pcl::PointCloud<pcl::PointXYZ>);
   pcl::transformPointCloud(*src_pcl, *est_cloud, solution_eigen);
-
-  // Save warped source cloud
   std::filesystem::path src_file_path(src_path);
   std::string warped_pcd_filename =
       src_file_path.parent_path().string() + "/" + src_file_path.stem().string() + "_warped.pcd";
   pcl::io::savePCDFileASCII(warped_pcd_filename, *est_cloud);
   std::cout << "Saved transformed source point cloud to: " << warped_pcd_filename << std::endl;
 
+  // ------------------------------------------------------------
   // Visualization
+  // ------------------------------------------------------------
+  pcl::transformPointCloud(src_viz, est_viz, solution_eigen);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr src_colored(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr tgt_colored(new pcl::PointCloud<pcl::PointXYZRGB>);
   pcl::PointCloud<pcl::PointXYZRGB>::Ptr est_q_colored(new pcl::PointCloud<pcl::PointXYZRGB>);

@@ -102,6 +102,18 @@ if __name__ == "__main__":
     result = matcher.estimate(src, tgt)
     matcher.print()
 
+    num_rot_inliers = matcher.get_num_rotation_inliers()
+    num_final_inliers = matcher.get_num_final_inliers()
+    # NOTE(hlim): By checking the final inliers, we can determine whether 
+    # the registration was successful or not. The larger the threshold,
+    # the more conservatively the decision is made.
+    # See https://github.com/MIT-SPARK/KISS-Matcher/issues/24
+    thres_num_inliers = 5
+    if (num_final_inliers < thres_num_inliers):
+        print("\033[1;33m=> Registration might have failed :(\033[0m\n")
+    else:
+        print("\033[1;32m=> Registration likely succeeded XD\033[0m\n")
+
     # ------------------------------------------------------------
     # Visualization
     # ------------------------------------------------------------
