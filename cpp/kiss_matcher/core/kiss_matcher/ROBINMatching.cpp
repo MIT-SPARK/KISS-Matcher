@@ -279,8 +279,8 @@ void ROBINMatching::runTupleTest(const std::vector<std::pair<int, int>>& corres,
 }
 
 void ROBINMatching::applyOutlierPruning(const std::vector<std::pair<int, int>>& corres,
-                                      std::vector<std::pair<int, int>>& corres_out,
-                                      const std::string& robin_mode) {
+                                        std::vector<std::pair<int, int>>& corres_out,
+                                        const std::string& robin_mode) {
   if (!corres.empty()) {
     size_t ncorr = corres.size();
     std::vector<bool> is_already_included(ncorr, false);
@@ -325,13 +325,14 @@ void ROBINMatching::applyOutlierPruning(const std::vector<std::pair<int, int>>& 
   }
 }
 
-std::vector<size_t> ROBINMatching::applyOutlierPruning(const std::vector<Eigen::Vector3f> &src_matched,
-                                        const std::vector<Eigen::Vector3f> &tgt_matched,
-                                        const std::string& robin_mode) {
+std::vector<size_t> ROBINMatching::applyOutlierPruning(
+    const std::vector<Eigen::Vector3f>& src_matched,
+    const std::vector<Eigen::Vector3f>& tgt_matched,
+    const std::string& robin_mode) {
   if (src_matched.size() != tgt_matched.size()) {
     std::runtime_error("The size of `src_matched` and `tgt_matched` should be same.");
   }
-if (src_matched.size() < 2 || tgt_matched.size() < 2) {
+  if (src_matched.size() < 2 || tgt_matched.size() < 2) {
     std::runtime_error("Too few matched points are given.");
   }
 
