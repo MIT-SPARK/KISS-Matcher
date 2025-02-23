@@ -298,6 +298,8 @@ void ROBINMatching::runTupleTestWithROBIN(const std::vector<std::pair<int, int>>
     auto* g = robin::Make3dRegInvGraph(src_robin, tgt_robin, noise_bound_);
 
     const auto& filtered_indices = [&]() {
+      // NOTE(hlim): Just use max core mode.
+      // `max_clique` not only took more time but also showed slightly worse performance.
       if (robin_mode == "max_core") {
         return robin::FindInlierStructure(g, robin::InlierGraphStructure::MAX_CORE);
       } else if (robin_mode == "max_clique") {
