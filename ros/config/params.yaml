@@ -1,0 +1,22 @@
+pointcloud_visualizer:
+  ros__parameters:
+    base_dir: "src/KISS-Matcher/cpp/examples/build/data/"
+    # src_pcd: "HeLiPR-KAIST05/Aeva.pcd"
+    # tgt_pcd: "HeLiPR-KAIST05/Ouster.pcd"
+    # src_pcd: "KITTI00-to-07/kitti00.pcd"
+    # tgt_pcd: "KITTI00-to-07/kitti07.pcd"
+    # src_pcd: "KITTI00-to-KITTI360/kitti00.pcd"
+    # tgt_pcd: "KITTI00-to-KITTI360/kitti360_09.pcd"
+    # src_pcd: "VBR-Collosseo/test0.pcd"
+    # tgt_pcd: "VBR-Collosseo/train0.pcd"
+    src_pcd: "Vel16/src.pcd"
+    tgt_pcd: "Vel16/tgt.pcd"
+    # src_pcd: "Vel64/kitti_000540.pcd"
+    # tgt_pcd: "Vel64/kitti_001319.pcd"
+    # src_pcd: "VBR-Collosseo/test0.pcd"
+    # tgt_pcd: "VBR-Collosseo/train0.pcd"
+
+    resolution: 0.2
+    moving_rate: 200.0
+    frame_rate: 30.0
+    scale: 1.0
