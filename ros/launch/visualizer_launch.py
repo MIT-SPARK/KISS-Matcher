@@ -9,9 +9,9 @@ def generate_launch_description():
                                "src/KISS-Matcher/ros/config/params.yaml")
 
     return launch.LaunchDescription([
-        launch_ros.actions.Node(package='pointcloud_visualizer',
-                                executable='pointcloud_visualizer',
-                                name='pointcloud_visualizer',
+        launch_ros.actions.Node(package='registration_visualizer',
+                                executable='registration_visualizer',
+                                name='registration_visualizer',
                                 parameters=[params_file]),
         launch_ros.actions.Node(
             package='rviz2',

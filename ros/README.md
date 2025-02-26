@@ -24,13 +24,7 @@ It allows users to animate the transformation of a source point cloud to match a
 
 To run example codes, in addition to installation of KISS-Matcher (run `make cppinstall` first), we need a) Point Cloud Library (PCL) and b) [TEASER++](<>) repository
 
-**1. Installation of PCL**
-
-```
-sudo apt install libpcl-dev
-```
-
-**2. TEASER++**
+**TEASER++**
 
 We support TEASER++ installation in an out-of-the-box manner. Please see `../../shellscripts` folder.
 
@@ -60,14 +54,14 @@ Then, build the ROS2 package
 
 ```bash
 cd ${ROS2_WORKSPACE}
-colcon build --packages-select pointcloud_visualizer
+colcon build --packages-select registration_visualizer
 source install/setup.bash
 ```
 
 Launch the visualization using the following command:
 
 ```bash
-ros2 launch pointcloud_visualizer visualizer_launch.py
+ros2 launch registration_visualizer visualizer_launch.py
 ```
 
 ______________________________________________________________________
@@ -79,31 +73,31 @@ You can customize the visualization parameters in **`config/params.yaml`** befor
 ### **Example Configuration**
 
 ```yaml
-pointcloud_visualizer:
+registration_visualizer:
   ros__parameters:
-    BASE_DIR: "src/KISS-Matcher/cpp/examples/build/data"
+    base_dir: "src/KISS-Matcher/cpp/examples/build/data/"
 
     # Specify the source and target PCD files
-    SRC_PCD_DIR: "Vel64/kitti_000540.pcd"
-    TGT_PCD_DIR: "Vel64/kitti_001319.pcd"
+    src_pcd_path: "Vel64/kitti_000540.pcd"
+    tgt_pcd_path: "Vel64/kitti_001319.pcd"
 
     # Registration settings
     resolution: 0.2  # Voxel grid resolution
     moving_rate: 200.0  # Animation steps
     frame_rate: 30.0  # FPS for animation
-    scale: 1.0  # Scale factor for the point cloud
+    scale_factor: 1.0  # Scale factor for the point cloud
 ```
 
 ### **Parameter Descriptions**
 
 | Parameter      | Description |
 |---------------|-------------|
-| `SRC_PCD_DIR`  | Path to the source PCD file |
-| `TGT_PCD_DIR`  | Path to the target PCD file |
+| `src_pcd_path`  | Path to the source PCD file |
+| `tgt_pcd_path`  | Path to the target PCD file |
 | `resolution`   | Voxel grid downsampling resolution |
 | `moving_rate`  | Number of animation steps of transition |
 | `frame_rate`   | Frames per second for animation in RViz |
-| `scale`        | Scaling factor applied to the point clouds |
+| `scale_factor`        | Scaling factor applied to the point clouds |
 
 ______________________________________________________________________
 
