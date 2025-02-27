@@ -58,7 +58,7 @@ You can customize the visualization parameters in **`config/params.yaml`** befor
 ### **Example Configuration**
 
 ```yaml
-kiss_matcher_ros:
+registration_visualizer:
   ros__parameters:
     base_dir: "src/KISS-Matcher/cpp/examples/build/data/"
 

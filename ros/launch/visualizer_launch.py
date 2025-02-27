@@ -10,8 +10,8 @@ def generate_launch_description():
 
     return launch.LaunchDescription([
         launch_ros.actions.Node(package='kiss_matcher_ros',
-                                executable='kiss_matcher_ros',
-                                name='kiss_matcher_ros',
+                                executable='registration_visualizer',
+                                name='registration_visualizer',
                                 parameters=[params_file]),
         launch_ros.actions.Node(
             package='rviz2',

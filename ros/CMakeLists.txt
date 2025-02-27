@@ -12,8 +12,8 @@ find_package(Eigen3 REQUIRED)
 find_package(robin REQUIRED)
 find_package(kiss_matcher REQUIRED)
 
-add_executable(kiss_matcher_ros src/kiss_matcher_ros.cpp)
-ament_target_dependencies(kiss_matcher_ros
+add_executable(registration_visualizer src/registration_visualizer.cpp)
+ament_target_dependencies(registration_visualizer
   rclcpp
   sensor_msgs
   pcl_conversions
@@ -22,7 +22,7 @@ ament_target_dependencies(kiss_matcher_ros
   robin
   kiss_matcher
 )
-target_link_libraries(kiss_matcher_ros
+target_link_libraries(registration_visualizer
   Eigen3::Eigen
   TBB::tbb
   kiss_matcher::kiss_matcher_core
@@ -31,7 +31,7 @@ target_link_libraries(kiss_matcher_ros
 )
 
 install(TARGETS
-  kiss_matcher_ros
+  registration_visualizer
   DESTINATION lib/${PROJECT_NAME}
 )
 
