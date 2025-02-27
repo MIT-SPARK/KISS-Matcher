@@ -1,4 +1,4 @@
-registration_visualizer:
+kiss_matcher_ros:
   ros__parameters:
     base_dir: "src/KISS-Matcher/cpp/examples/build/data/"
     # NOTE(dkim): These are provided examples of PCD pairs

@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <package format="3">
-  <name>registration_visualizer</name>
+  <name>kiss_matcher_ros</name>
   <version>0.1.0</version>
   <description>PointCloud Visualizer for ROS2</description>
   <maintainer email="ted97k@kaist.ac.kr">Daebeom Kim</maintainer>

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(registration_visualizer)
+project(kiss_matcher_ros)
 
 cmake_policy(SET CMP0074 NEW)
 
@@ -12,8 +12,8 @@ find_package(Eigen3 REQUIRED)
 find_package(robin REQUIRED)
 find_package(kiss_matcher REQUIRED)
 
-add_executable(registration_visualizer src/registration_visualizer.cpp)
-ament_target_dependencies(registration_visualizer
+add_executable(kiss_matcher_ros src/kiss_matcher_ros.cpp)
+ament_target_dependencies(kiss_matcher_ros
   rclcpp
   sensor_msgs
   pcl_conversions
@@ -22,7 +22,7 @@ ament_target_dependencies(registration_visualizer
   robin
   kiss_matcher
 )
-target_link_libraries(registration_visualizer
+target_link_libraries(kiss_matcher_ros
   Eigen3::Eigen
   TBB::tbb
   kiss_matcher::kiss_matcher_core
@@ -31,7 +31,7 @@ target_link_libraries(registration_visualizer
 )
 
 install(TARGETS
-  registration_visualizer
+  kiss_matcher_ros
   DESTINATION lib/${PROJECT_NAME}
 )
 

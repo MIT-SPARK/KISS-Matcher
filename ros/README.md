@@ -22,24 +22,9 @@ It allows users to animate the transformation of a source point cloud to match a
 
 ## :package: Prerequisites
 
-To run example codes, in addition to installation of KISS-Matcher (run `make cppinstall` first), we need a) Point Cloud Library (PCL) and b) [TEASER++](<>) repository
+To run example codes, in addition to installation of KISS-Matcher (run `make cppinstall` first).
 
-**TEASER++**
-
-We support TEASER++ installation in an out-of-the-box manner. Please see `../../shellscripts` folder.
-
-```
-cd ${MAIN_DIR_OF_KISS_MATCHER_REPOSITORY}
-bash shellscripts/install_teaserpp.sh
-```
-
-Then, **please** run
-
-```
-sudo ldconfig
-```
-
-❓ Why is `sudo ldconfig` needed?: Because both ROBIN and TEASER++ have a dependency on [pmc](https://github.com/jingnanshi/pmc). Without `sudo ldconfig`, you might see [error while loading shared libraries: libpmc.so](https://github.com/MIT-SPARK/KISS-Matcher/issues/14) error.
+If you only need to download example datasets, please use [download_datasets.py](https://github.com/kimdaebeom/KISS-Matcher/blob/main/python/utils/download_datasets.py).
 
 ## :gear: How To Build & RUN
 
@@ -54,14 +39,14 @@ Then, build the ROS2 package
 
 ```bash
 cd ${ROS2_WORKSPACE}
-colcon build --packages-select registration_visualizer
+colcon build --packages-select kiss_matcher_ros
 source install/setup.bash
 ```
 
 Launch the visualization using the following command:
 
 ```bash
-ros2 launch registration_visualizer visualizer_launch.py
+ros2 launch kiss_matcher_ros visualizer_launch.py
 ```
 
 ______________________________________________________________________
@@ -73,7 +58,7 @@ You can customize the visualization parameters in **`config/params.yaml`** befor
 ### **Example Configuration**
 
 ```yaml
-registration_visualizer:
+kiss_matcher_ros:
   ros__parameters:
     base_dir: "src/KISS-Matcher/cpp/examples/build/data/"
 
