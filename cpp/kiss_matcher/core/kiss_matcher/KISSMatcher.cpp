@@ -104,10 +104,10 @@ kiss_matcher::KeypointPair KISSMatcher::match(const Eigen::Matrix<double, 3, Eig
   std::vector<Eigen::Vector3f> src_vec(src.cols());
   std::vector<Eigen::Vector3f> tgt_vec(tgt.cols());
 
-  for (size_t i = 0; i < src.cols(); ++i) {
+  for (ssize_t i = 0; i < src.cols(); ++i) {
     src_vec[i] = src.col(i).cast<float>();
   }
-  for (size_t i = 0; i < tgt.cols(); ++i) {
+  for (ssize_t i = 0; i < tgt.cols(); ++i) {
     tgt_vec[i] = tgt.col(i).cast<float>();
   }
 

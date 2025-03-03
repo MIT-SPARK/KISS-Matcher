@@ -58,7 +58,7 @@ std::tuple<bool, Eigen::Vector3f> FasterPFH::EstimateNormalVectorWithLinearityFi
   Eigen::Matrix3f covariance = Eigen::Matrix3f::Zero();
   int count                  = 0;
 
-  for (int j = 0; j < static_cast<size_t>(corr_fpfh.neighboring_indices.size()); ++j) {
+  for (std::size_t j = 0; j < corr_fpfh.neighboring_indices.size(); ++j) {
     if (corr_fpfh.neighboring_dists[j] < thr_radius) {
       int idx                      = corr_fpfh.neighboring_indices[j];
       const Eigen::Vector3f &point = points_[idx];
@@ -77,7 +77,7 @@ std::tuple<bool, Eigen::Vector3f> FasterPFH::EstimateNormalVectorWithLinearityFi
   mean /= static_cast<float>(count);
 
   // Calculate covariance
-  for (int j = 0; j < corr_fpfh.neighboring_indices.size(); ++j) {
+  for (std::size_t j = 0; j < corr_fpfh.neighboring_indices.size(); ++j) {
     if (corr_fpfh.neighboring_dists[j] < thr_radius) {
       Eigen::Vector3f point     = points_[corr_fpfh.neighboring_indices[j]];
       Eigen::Vector3f deviation = point - mean;
@@ -150,14 +150,16 @@ void FasterPFH::ComputeFeature(std::vector<Eigen::Vector3f> &points,
         for (uint32_t i = r.begin(); i != r.end(); ++i) {
           if (criteria_ == "L2") {
             // Then, neighboring_dists are squared distances
-            std::vector<std::pair<size_t, double> > indices_dists;
+            std::vector<std::pair<uint32_t, double> > indices_dists;
             indices_dists.reserve(1000);
             // NOTE: squared distance is used, and outputs are also squared values
             size_t num_results =
                 kdtree.radius_search(cloud_nano.point(i), sqr_fpfh_radius_, indices_dists);
-            for (const auto &[idx, sqr_dist] : indices_dists) {
-              corrs_fpfh_[i].neighboring_indices.push_back(idx);
-              corrs_fpfh_[i].neighboring_dists.push_back(sqr_dist);
+            if (num_results > 0) {
+              for (const auto &[idx, sqr_dist] : indices_dists) {
+                corrs_fpfh_[i].neighboring_indices.push_back(idx);
+                corrs_fpfh_[i].neighboring_dists.push_back(sqr_dist);
+              }
             }
           }
 
