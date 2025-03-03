@@ -37,6 +37,7 @@ add_library(${TARGET_NAME} STATIC
     core/kiss_matcher/KISSMatcher.cpp
     core/kiss_matcher/GncSolver.cpp
 )
+add_library(kiss_matcher::kiss_matcher_core ALIAS kiss_matcher_core)
 
 target_link_libraries(${TARGET_NAME}
     PUBLIC Eigen3::Eigen robin::robin ${OpenMP_LIBS} ${EIGEN3_LIBS} TBB::tbb ${LZ4_LIBRARY}
