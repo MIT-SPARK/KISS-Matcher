@@ -25,6 +25,25 @@ find_package(PCL REQUIRED)
 find_package(Eigen3 REQUIRED)
 find_package(tf2_ros REQUIRED)
 
+find_package(PCL REQUIRED)
+include_directories(${PCL_INCLUDE_DIRS})
+link_directories(${PCL_LIBRARY_DIRS})
+add_definitions(${PCL_DEFINITIONS})
+
+add_executable(run_kiss_matcher src/run_kiss_matcher.cpp)
+target_include_directories(run_kiss_matcher
+    PUBLIC
+    ${PCL_INCLUDE_DIRS}
+)
+
+target_link_libraries(run_kiss_matcher
+    Eigen3::Eigen
+    TBB::tbb
+    kiss_matcher::kiss_matcher_core
+    robin::robin
+    ${PCL_LIBRARIES}
+)
+
 add_executable(registration_visualizer src/registration_visualizer.cpp)
 ament_target_dependencies(registration_visualizer
   rclcpp
@@ -44,6 +63,7 @@ target_link_libraries(registration_visualizer
 
 install(TARGETS
   registration_visualizer
+  run_kiss_matcher
   DESTINATION lib/${PROJECT_NAME}
 )
 
