@@ -21,7 +21,7 @@ class UnsafeKdTreeGeneric {
   using ConstPtr  = std::shared_ptr<const UnsafeKdTreeGeneric>;
   using ThisClass = UnsafeKdTreeGeneric<PointCloud, Adaptor>;
   using Index =
-      Adaptor<kiss_matcher::L2_Simple_Adaptor<double, ThisClass, double>, ThisClass, 3, size_t>;
+      Adaptor<kiss_matcher::L2_Simple_Adaptor<double, ThisClass, double>, ThisClass, 3, uint32_t>;
 
   /// @brief Constructor
   /// @param points  Input points
@@ -63,7 +63,7 @@ class UnsafeKdTreeGeneric {
   /// @brief Find neighbors within the radius
   size_t radius_search(const Eigen::Vector4d &pt,
                        double r,
-                       std::vector<std::pair<size_t, double>> &indices_sq_dists) const {
+                       std::vector<std::pair<uint32_t, double>> &indices_sq_dists) const {
     kiss_matcher::SearchParams params;
     params.sorted = false;  // to boost the speed
     return index.radiusSearch(pt.data(), r, indices_sq_dists, params);
@@ -104,7 +104,7 @@ class KdTreeGeneric {
   /// @brief Find neighbors within the radius
   size_t radius_search(const Eigen::Vector4d &pt,
                        double r,
-                       std::vector<std::pair<size_t, double>> &indices_sq_dists) const {
+                       std::vector<std::pair<uint32_t, double>> &indices_sq_dists) const {
     kiss_matcher::SearchParams params;
     params.sorted = false;  // to boost the speed
     return tree.radius_search(pt.data(), r, indices_sq_dists, params);
@@ -138,7 +138,7 @@ struct Traits<UnsafeKdTreeGeneric<PointCloud, Adaptor>> {
   static size_t radius_search(const UnsafeKdTreeGeneric<PointCloud, Adaptor> &tree,
                               const Eigen::Vector4d &point,
                               double r,
-                              std::vector<std::pair<size_t, double>> &indices_sq_dists) {
+                              std::vector<std::pair<uint32_t, double>> &indices_sq_dists) {
     kiss_matcher::SearchParams params;
     params.sorted = false;  // to boost the speed
     return tree.radius_search(point, r, indices_sq_dists);
@@ -158,7 +158,7 @@ struct Traits<KdTreeGeneric<PointCloud, Adaptor>> {
   static size_t radius_search(const KdTreeGeneric<PointCloud, Adaptor> &tree,
                               const Eigen::Vector4d &point,
                               double r,
-                              std::vector<std::pair<size_t, double>> &indices_sq_dists) {
+                              std::vector<std::pair<uint32_t, double>> &indices_sq_dists) {
     kiss_matcher::SearchParams params;
     params.sorted = false;  // to boost the speed
     return tree.radius_search(point, r, indices_sq_dists);

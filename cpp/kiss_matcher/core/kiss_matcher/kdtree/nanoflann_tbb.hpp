@@ -73,8 +73,8 @@ namespace kiss_matcher {
 template <class Derived,
           typename Distance,
           class DatasetAdaptor,
-          int DIM            = -1,
-          typename IndexType = size_t>
+          int32_t DIM            = -1,
+          typename IndexType = uint32_t>
 class KDTreeBaseClassTBB {
  public:
   /** Frees the previously-built index. Automatically called within
@@ -87,16 +87,24 @@ class KDTreeBaseClassTBB {
   typedef typename Distance::ElementType ElementType;
   typedef typename Distance::DistanceType DistanceType;
 
+  /**
+   *  Array of indices to vectors in the dataset.
+   */
+  std::vector<IndexType> vind;
+  using Offset    = typename decltype(vind)::size_type;
+  using Size      = typename decltype(vind)::size_type;
+  using Dimension = int32_t;
+
   /*--------------------- Internal Data Structures --------------------------*/
   struct Node {
     /** Union used because a node can be either a LEAF node or a non-leaf node,
      * so both data fields are never used simultaneously */
     union {
       struct leaf {
-        IndexType left, right;  //!< Indices of points in leaf node
+        Offset left, right;  //!< Indices of points in leaf node
       } lr;
       struct nonleaf {
-        int divfeat;                   //!< Dimension used for subdivision.
+        Dimension divfeat;                   //!< Dimension used for subdivision.
         DistanceType divlow, divhigh;  //!< The values used for subdivision.
       } sub;
     } node_type;
@@ -109,19 +117,14 @@ class KDTreeBaseClassTBB {
     ElementType low, high;
   };
 
-  /**
-   *  Array of indices to vectors in the dataset.
-   */
-  std::vector<IndexType> vind;
-
   NodePtr root_node;
 
-  size_t m_leaf_max_size;
+  Size m_leaf_max_size;
 
-  size_t m_size;                 //!< Number of current points in the dataset
-  size_t m_size_at_index_build;  //!< Number of points in the dataset when the
-                                 //!< index was built
-  int dim;                       //!< Dimensionality of each data point
+  Size m_size;                 //!< Number of current points in the dataset
+  Size m_size_at_index_build;  //!< Number of points in the dataset when the
+                               //!< index was built
+  Dimension dim;               //!< Dimensionality of each data point
 
   /** Define "BoundingBox" as a fixed-size or variable-size container depending
    * on "DIM" */
@@ -145,26 +148,26 @@ class KDTreeBaseClassTBB {
   tbb::concurrent_vector<Node> pool;
 
   /** Returns number of points in dataset  */
-  size_t size(const Derived& obj) const { return obj.m_size; }
+  Size size(const Derived &obj) const { return obj.m_size; }
 
   /** Returns the length of each point in the dataset */
-  size_t veclen(const Derived& obj) { return static_cast<size_t>(DIM > 0 ? DIM : obj.dim); }
+  Size veclen(const Derived &obj) { return static_cast<Size>(DIM > 0 ? DIM : obj.dim); }
 
   /// Helper accessor to the dataset points:
-  inline ElementType dataset_get(const Derived& obj, size_t idx, int component) const {
+  inline ElementType dataset_get(const Derived &obj, IndexType idx, Dimension component) const {
     return obj.dataset.kdtree_get_pt(idx, component);
   }
 
-  void computeMinMax(const Derived& obj,
-                     IndexType* ind,
-                     IndexType count,
-                     int element,
-                     ElementType& min_elem,
-                     ElementType& max_elem) {
-    min_elem = dataset_get(obj, ind[0], element);
-    max_elem = dataset_get(obj, ind[0], element);
-    for (IndexType i = 1; i < count; ++i) {
-      ElementType val = dataset_get(obj, ind[i], element);
+  void computeMinMax(const Derived &obj,
+                     Offset ind,
+                     Size count,
+                     Dimension element,
+                     ElementType &min_elem,
+                     ElementType &max_elem) {
+    min_elem = dataset_get(obj, vind[ind], element);
+    max_elem = min_elem;
+    for (Offset i = 1; i < count; ++i) {
+      ElementType val = dataset_get(obj, vind[ind + i], element);
       if (val < min_elem) min_elem = val;
       if (val > max_elem) max_elem = val;
     }
@@ -177,22 +180,22 @@ class KDTreeBaseClassTBB {
    * @param left index of the first vector
    * @param right index of the last vector
    */
-  NodePtr divideTree(Derived& obj, const IndexType left, const IndexType right, BoundingBox& bbox) {
+  NodePtr divideTree(Derived &obj, const Offset left, const Offset right, BoundingBox &bbox) {
     NodePtr node = &(*pool.emplace_back());
 
     /* If too few exemplars remain, then make this a leaf node. */
-    if ((right - left) <= static_cast<IndexType>(obj.m_leaf_max_size)) {
+    if ((right - left) <= static_cast<Offset>(obj.m_leaf_max_size)) {
       node->child1 = node->child2 = NULL; /* Mark as leaf node. */
       node->node_type.lr.left     = left;
       node->node_type.lr.right    = right;
 
       // compute bounding-box of leaf points
-      for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+      for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
         bbox[i].low  = dataset_get(obj, obj.vind[left], i);
         bbox[i].high = dataset_get(obj, obj.vind[left], i);
       }
-      for (IndexType k = left + 1; k < right; ++k) {
-        for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+      for (Offset k = left + 1; k < right; ++k) {
+        for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
           if (bbox[i].low > dataset_get(obj, obj.vind[k], i))
             bbox[i].low = dataset_get(obj, obj.vind[k], i);
           if (bbox[i].high < dataset_get(obj, obj.vind[k], i))
@@ -200,10 +203,10 @@ class KDTreeBaseClassTBB {
         }
       }
     } else {
-      IndexType idx;
-      int cutfeat;
+      Offset idx;
+      Dimension cutfeat;
       DistanceType cutval;
-      middleSplit_(obj, &obj.vind[0] + left, right - left, idx, cutfeat, cutval, bbox);
+      middleSplit_(obj, left, right - left, idx, cutfeat, cutval, bbox);
 
       node->node_type.sub.divfeat = cutfeat;
 
@@ -229,7 +232,7 @@ class KDTreeBaseClassTBB {
       node->node_type.sub.divlow  = left_bbox[cutfeat].high;
       node->node_type.sub.divhigh = right_bbox[cutfeat].low;
 
-      for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+      for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
         bbox[i].low  = std::min(left_bbox[i].low, right_bbox[i].low);
         bbox[i].high = std::max(left_bbox[i].high, right_bbox[i].high);
       }
@@ -238,16 +241,16 @@ class KDTreeBaseClassTBB {
     return node;
   }
 
-  void middleSplit_(Derived& obj,
-                    IndexType* ind,
-                    IndexType count,
-                    IndexType& index,
-                    int& cutfeat,
-                    DistanceType& cutval,
-                    const BoundingBox& bbox) {
+  void middleSplit_(Derived &obj,
+                    const Offset ind,
+                    const Size count,
+                    Offset &index,
+                    Dimension &cutfeat,
+                    DistanceType &cutval,
+                    const BoundingBox &bbox) {
     const DistanceType EPS = static_cast<DistanceType>(0.00001);
     ElementType max_span   = bbox[0].high - bbox[0].low;
-    for (int i = 1; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+    for (Dimension i = 1; i < (DIM > 0 ? DIM : obj.dim); ++i) {
       ElementType span = bbox[i].high - bbox[i].low;
       if (span > max_span) {
         max_span = span;
@@ -255,7 +258,7 @@ class KDTreeBaseClassTBB {
     }
     ElementType max_spread = -1;
     cutfeat                = 0;
-    for (int i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
+    for (Dimension i = 0; i < (DIM > 0 ? DIM : obj.dim); ++i) {
       ElementType span = bbox[i].high - bbox[i].low;
       if (span > (1 - EPS) * max_span) {
         ElementType min_elem, max_elem;
@@ -279,7 +282,7 @@ class KDTreeBaseClassTBB {
     else
       cutval = split_val;
 
-    IndexType lim1, lim2;
+    Offset lim1, lim2;
     planeSplit(obj, ind, count, cutfeat, cutval, lim1, lim2);
 
     if (lim1 > count / 2)
@@ -299,21 +302,21 @@ class KDTreeBaseClassTBB {
    *  dataset[ind[lim1..lim2-1]][cutfeat]==cutval
    *  dataset[ind[lim2..count]][cutfeat]>cutval
    */
-  void planeSplit(Derived& obj,
-                  IndexType* ind,
-                  const IndexType count,
-                  int cutfeat,
-                  DistanceType& cutval,
-                  IndexType& lim1,
-                  IndexType& lim2) {
+  void planeSplit(Derived &obj,
+                  const Offset ind,
+                  const Size count,
+                  const Dimension cutfeat,
+                  const DistanceType &cutval,
+                  Offset &lim1,
+                  Offset &lim2) {
     /* Move vector indices for left subtree to front of list. */
-    IndexType left  = 0;
-    IndexType right = count - 1;
+    Offset left  = 0;
+    Offset right = count - 1;
     for (;;) {
-      while (left <= right && dataset_get(obj, ind[left], cutfeat) < cutval) ++left;
-      while (right && left <= right && dataset_get(obj, ind[right], cutfeat) >= cutval) --right;
+      while (left <= right && dataset_get(obj, vind[ind + left], cutfeat) < cutval) ++left;
+      while (right && left <= right && dataset_get(obj, vind[ind + right], cutfeat) >= cutval) --right;
       if (left > right || !right) break;  // "!right" was added to support unsigned Index types
-      std::swap(ind[left], ind[right]);
+      std::swap(vind[ind + left], vind[ind + right]);
       ++left;
       --right;
     }
@@ -323,19 +326,19 @@ class KDTreeBaseClassTBB {
     lim1  = left;
     right = count - 1;
     for (;;) {
-      while (left <= right && dataset_get(obj, ind[left], cutfeat) <= cutval) ++left;
-      while (right && left <= right && dataset_get(obj, ind[right], cutfeat) > cutval) --right;
+      while (left <= right && dataset_get(obj, vind[ind + left], cutfeat) <= cutval) ++left;
+      while (right && left <= right && dataset_get(obj, vind[ind + right], cutfeat) > cutval) --right;
       if (left > right || !right) break;  // "!right" was added to support unsigned Index types
-      std::swap(ind[left], ind[right]);
+      std::swap(vind[ind + left], vind[ind + right]);
       ++left;
       --right;
     }
     lim2 = left;
   }
 
-  DistanceType computeInitialDistances(const Derived& obj,
-                                       const ElementType* vec,
-                                       distance_vector_t& dists) const {
+  DistanceType computeInitialDistances(const Derived &obj,
+                                       const ElementType *vec,
+                                       distance_vector_t &dists) const {
     assert(vec);
     DistanceType distsq = DistanceType();
 
@@ -393,7 +396,7 @@ class KDTreeBaseClassTBB {
  * Dimensionality of data points (e.g. 3 for 3D points) \tparam IndexType Will
  * be typically size_t or int
  */
-template <typename Distance, class DatasetAdaptor, int DIM = -1, typename IndexType = size_t>
+template <typename Distance, class DatasetAdaptor, int DIM = -1, typename IndexType = uint32_t>
 class KDTreeSingleIndexAdaptorTBB
     : public KDTreeBaseClassTBB<
           KDTreeSingleIndexAdaptorTBB<Distance, DatasetAdaptor, DIM, IndexType>,
@@ -422,6 +425,10 @@ class KDTreeSingleIndexAdaptorTBB
       DIM,
       IndexType>
       BaseClassRef;
+
+  using Offset    = typename BaseClassRef::Offset;
+  using Size      = typename BaseClassRef::Size;
+  using Dimension = typename BaseClassRef::Dimension;
 
   typedef typename BaseClassRef::ElementType ElementType;
   typedef typename BaseClassRef::DistanceType DistanceType;
@@ -599,7 +606,7 @@ class KDTreeSingleIndexAdaptorTBB
     BaseClassRef::m_size = dataset.kdtree_get_point_count();
     if (BaseClassRef::vind.size() != BaseClassRef::m_size)
       BaseClassRef::vind.resize(BaseClassRef::m_size);
-    for (size_t i = 0; i < BaseClassRef::m_size; i++) BaseClassRef::vind[i] = i;
+    for (IndexType i = 0; i < BaseClassRef::m_size; i++) BaseClassRef::vind[i] = i;
   }
 
   void computeBoundingBox(BoundingBox& bbox) {
@@ -615,7 +622,7 @@ class KDTreeSingleIndexAdaptorTBB
       for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
         bbox[i].low = bbox[i].high = this->dataset_get(*this, 0, i);
       }
-      for (size_t k = 1; k < N; ++k) {
+      for (IndexType k = 1; k < N; ++k) {
         for (int i = 0; i < (DIM > 0 ? DIM : BaseClassRef::dim); ++i) {
           if (this->dataset_get(*this, k, i) < bbox[i].low)
             bbox[i].low = this->dataset_get(*this, k, i);
@@ -644,7 +651,7 @@ class KDTreeSingleIndexAdaptorTBB
       // count_leaf += (node->lr.right-node->lr.left);  // Removed since was
       // neither used nor returned to the user.
       DistanceType worst_dist = result_set.worstDist();
-      for (IndexType i = node->node_type.lr.left; i < node->node_type.lr.right; ++i) {
+      for (Offset i = node->node_type.lr.left; i < node->node_type.lr.right; ++i) {
         const IndexType index = BaseClassRef::vind[i];  // reorder... : i;
         DistanceType dist = distance.evalMetric(vec, index, (DIM > 0 ? DIM : BaseClassRef::dim));
         if (dist < worst_dist) {
