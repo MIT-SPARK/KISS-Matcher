@@ -23,10 +23,12 @@ find_package(sensor_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(PCL REQUIRED)
 find_package(Eigen3 REQUIRED)
+find_package(tf2_ros REQUIRED)
 
 add_executable(registration_visualizer src/registration_visualizer.cpp)
 ament_target_dependencies(registration_visualizer
   rclcpp
+  tf2_ros
   sensor_msgs
   pcl_conversions
   PCL
