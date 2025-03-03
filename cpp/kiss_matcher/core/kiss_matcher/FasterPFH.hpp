@@ -28,7 +28,12 @@
 
 using MyKdTree = kiss_matcher::UnsafeKdTree<kiss_matcher::PointCloud>;
 
-#define NOT_ASSIGNED -1
+// was #define NOT_ASSIGNED -1 but results in a sign comparison warning
+// as it is compared against the indices which are uint32_t or size_t
+// This quiets the warning but is probably not what is intended.
+// NEEDS thought!
+#define NOT_ASSIGNED std::numeric_limits<uint32_t>::max()
+
 #define UNASSIGNED_NORMAL                                  \
   Eigen::Vector3f(std::numeric_limits<float>::quiet_NaN(), \
                   std::numeric_limits<float>::quiet_NaN(), \
