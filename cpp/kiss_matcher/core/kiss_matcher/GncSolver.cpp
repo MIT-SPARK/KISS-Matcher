@@ -450,7 +450,7 @@ RegistrationSolution RobustRegistrationSolver::solve(
   pruned_dst_tims_.resize(3, num_corr);
   for (size_t i = 0; i < num_corr; ++i) {
     const auto& root = indices_[i];
-    int leaf;
+    size_t leaf;
     if (i != num_corr - 1) {
       leaf = indices_[i + 1];
     } else {
