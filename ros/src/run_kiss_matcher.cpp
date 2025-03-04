@@ -74,6 +74,11 @@ int main(int argc, char** argv) {
     roll_transform(2, 2) = std::cos(roll_rad);
   }
 
+  ssize_t stress = 0;
+  if (argc > 6) {
+    stress = std::stoi(argv[6]);  // Number of stress iterations
+  }
+
   Eigen::Matrix4f rotation_transform = yaw_transform * roll_transform;
 
   std::cout << "Source input: " << src_path << "\n";
@@ -109,9 +114,17 @@ int main(int argc, char** argv) {
   // If you want to try your own scan at a scan-level or loop closing situation,
   // setting `false` boosts the inference speed.
   // config.use_ratio_test_ = false;
-  kiss_matcher::KISSMatcher matcher(config);
 
-  const auto solution = matcher.estimate(src_vec, tgt_vec);
+  kiss_matcher::KISSMatcher matcher(config);
+  kiss_matcher::RegistrationSolution solution;
+  solution = matcher.estimate(src_vec, tgt_vec);
+  for (int i = 1; i < stress; i++) {
+    matcher.clear();
+    matcher.reset();
+    matcher.resetSolver();
+    solution = matcher.estimate(src_vec, tgt_vec);
+    std::cout << "stress iteration:" << i << std::endl;
+  }
 
   // Visualization
   pcl::PointCloud<pcl::PointXYZ> src_viz = *src_pcl;
