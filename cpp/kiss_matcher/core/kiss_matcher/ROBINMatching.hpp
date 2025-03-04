@@ -84,8 +84,8 @@ class ROBINMatching {
   size_t fi_ = 0;  // source idx
   size_t fj_ = 1;  // destination idx
 
-  size_t nPti_;
-  size_t nPtj_;
+  ssize_t nPti_;
+  ssize_t nPtj_;
 
   bool swapped_ = false;
 

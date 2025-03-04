@@ -63,10 +63,10 @@ void ROBINMatching::match(const std::string& robin_mode, float tuple_scale, bool
 
   // NOTE(hlim): `2` indicates that we save the two distances between the two closest descriptors.
   int num_candidates = use_ratio_test ? 2 : 1;
-  std::vector<std::vector<int>> corres_K(nPtj_, std::vector<int>(1, 0));
-  std::vector<std::vector<int>> corres_K2(nPti_, std::vector<int>(1, 0));
+  std::vector<std::vector<int>> corres_K(nPtj_, std::vector<int>(num_candidates, 0));
+  std::vector<std::vector<int>> corres_K2(nPti_, std::vector<int>(num_candidates, 0));
   std::vector<std::vector<float>> dis_j(nPtj_, std::vector<float>(num_candidates, 0.0));
-  std::vector<std::vector<float>> dis_i(nPti_, std::vector<float>(1, 0.0));
+  std::vector<std::vector<float>> dis_i(nPti_, std::vector<float>(num_candidates, 0.0));
 
   std::vector<std::pair<int, int>> corres_ij;
   std::vector<std::pair<int, int>> corres_ji;
@@ -104,9 +104,9 @@ void ROBINMatching::match(const std::string& robin_mode, float tuple_scale, bool
   // float ratio = dis_j[j][0] / dis_j[j][1]; <- 98.56%
   // float ratio = dis_j[j][0];               <- 97.84%
   matched_pairs.reserve(nPti_);
-  for (size_t j = 0; j < nPtj_; j++) {
+  for (ssize_t j = 0; j < nPtj_; j++) {
     int ji = j_to_i_multi_flann[j];
-    if (j == i_to_j_multi_flann[ji]) {
+    if (ji != -1 && j == i_to_j_multi_flann[ji]) {
       float ratio = use_ratio_test ? dis_j[j][0] / dis_j[j][1] : 0.0;
       matched_pairs.emplace_back(ji, j, ratio);
     }
@@ -172,7 +172,7 @@ void ROBINMatching::setStatuses() {
 
 void ROBINMatching::runTupleTest(const std::vector<std::pair<int, int>>& corres,
                                  std::vector<std::pair<int, int>>& corres_out,
-                                 const float tuple_scale) {
+                                 const float /*tuple_scale*/) {
   if (!corres.empty()) {
     size_t rand0, rand1, rand2;
     size_t idi0, idi1, idi2;
