@@ -5,6 +5,7 @@ option(USE_CCACHE "Build using Ccache if found on the path" ON)
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
 option(USE_SYSTEM_TBB "Use system pre-installed oneAPI/tbb" ON)
 option(USE_SYSTEM_ROBIN "Use system pre-installed ROBIN from SPARK @ MIT" ON)
+option(USE_ADDRESS_SANITIZER "Use address sanitizer" OFF)
 
 # Set a default build type if none is specified
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -16,6 +17,11 @@ endif()
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
+
+if (USE_ADDRESS_SANITIZER)
+    add_compile_options(-fsanitize=address -fsanitize-recover=address)
+    add_link_options(-fsanitize=address -fsanitize-recover=address)
+endif()
 
 include(GNUInstallDirs)
 include(3rdparty/find_dependencies.cmake)

@@ -14,6 +14,12 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 cmake_policy(SET CMP0074 NEW)
 
+option(USE_ADDRESS_SANITIZER "Use address sanitizer" OFF)
+if (USE_ADDRESS_SANITIZER)
+    add_compile_options(-fsanitize=address -fsanitize-recover=address)
+    add_link_options(-fsanitize=address -fsanitize-recover=address)
+endif()
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cpp/kiss_matcher/ AND NOT IS_SYMLINK ${CMAKE_CURRENT_SOURCE_DIR})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/../cpp/kiss_matcher ${CMAKE_CURRENT_BINARY_DIR}/kiss_matcher)
 else()
