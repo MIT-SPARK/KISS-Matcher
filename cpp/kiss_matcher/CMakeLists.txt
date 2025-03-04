@@ -6,17 +6,23 @@ option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
 option(USE_SYSTEM_TBB "Use system pre-installed oneAPI/tbb" ON)
 option(USE_SYSTEM_ROBIN "Use system pre-installed ROBIN from SPARK @ MIT" ON)
 
+# Set a default build type if none is specified
+if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+    message(STATUS "Setting build type to 'Release' as none was specified.")
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Choose the type of build." FORCE)
+    # Provide options for cmake-gui or ccmake
+    set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
+endif()
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 include(GNUInstallDirs)
 include(3rdparty/find_dependencies.cmake)
 include(cmake/CompilerOptions.cmake)
 
 # NOTE(hlim): Without this line, pybinded KISS-Matcher does not work
 find_library(LZ4_LIBRARY lz4 REQUIRED)
-
-set(CMAKE_BUILD_TYPE "Release")
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(FindOpenMP) #The best way to set proper compiler settings for using OpenMP in all platforms
 if (OPENMP_FOUND) #The best way to set proper compiler settings for using OpenMP in all platforms
