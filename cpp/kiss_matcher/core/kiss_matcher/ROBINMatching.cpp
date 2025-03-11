@@ -63,10 +63,10 @@ void ROBINMatching::match(const std::string& robin_mode, float tuple_scale, bool
 
   // NOTE(hlim): `2` indicates that we save the two distances between the two closest descriptors.
   int num_candidates = use_ratio_test ? 2 : 1;
-  std::vector<std::vector<int>> corres_K(nPtj_, std::vector<int>(num_candidates, 0));
-  std::vector<std::vector<int>> corres_K2(nPti_, std::vector<int>(num_candidates, 0));
-  std::vector<std::vector<float>> dis_j(nPtj_, std::vector<float>(num_candidates, 0.0));
-  std::vector<std::vector<float>> dis_i(nPti_, std::vector<float>(num_candidates, 0.0));
+  std::vector<std::array<int, 2>> corres_K(nPtj_, {0,0});
+  std::vector<std::array<int, 2>> corres_K2(nPti_, {0,0});
+  std::vector<std::array<float, 2>> dis_j(nPtj_, {0.0, 0.0});
+  std::vector<std::array<float, 2>> dis_i(nPti_, {0.0, 0.0});
 
   std::vector<std::pair<int, int>> corres_ij;
   std::vector<std::pair<int, int>> corres_ji;
@@ -381,8 +381,8 @@ void ROBINMatching::buildKDTree(const std::vector<T>& data, ROBINMatching::KDTre
 template <typename T>
 void ROBINMatching::searchKDTree(const KDTree& tree,
                                  const T& input,
-                                 std::vector<int>& indices,
-                                 std::vector<float>& dists,
+                                 std::array<int, 2>& indices,
+                                 std::array<float, 2>& dists,
                                  int nn) {
   size_t rows_t = 1;
   size_t dim    = input.size();

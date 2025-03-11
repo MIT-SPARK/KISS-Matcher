@@ -95,8 +95,8 @@ class ROBINMatching {
   template <typename T>
   void searchKDTree(const KDTree& tree,
                     const T& input,
-                    std::vector<int>& indices,
-                    std::vector<float>& dists,
+                    std::array<int, 2>& indices,
+                    std::array<float, 2>& dists,
                     int nn);
 
   template <typename T>
