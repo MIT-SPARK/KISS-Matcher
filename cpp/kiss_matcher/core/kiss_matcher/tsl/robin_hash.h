@@ -1336,6 +1336,7 @@ class robin_hash : private Hash, private KeyEqual, private GrowthPolicy {
     if (m_grow_on_next_insert ||
         curr_dist_from_ideal_bucket > bucket_entry::DIST_FROM_IDEAL_BUCKET_LIMIT ||
         size() >= m_load_threshold) {
+      std::cout << "!rehash_on_extreme_load, size:" << size() << std::endl;
       rehash_impl(GrowthPolicy::next_bucket_count());
       m_grow_on_next_insert = false;
 

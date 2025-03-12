@@ -189,8 +189,6 @@ void FasterPFH::ComputeFeature(std::vector<Eigen::Vector3f> &points,
   FilterIndicesCausingNaN(spfh_indices_);
   // auto t_e_n = std::chrono::high_resolution_clock::now();
 
-  // Setting up the SPFH histogram bins and lookup table
-  spfh_hist_lookup_.clear();
 
   // Initialize the arrays that will store the SPFH signatures
   std::size_t data_size = spfh_indices_.size();
@@ -201,6 +199,11 @@ void FasterPFH::ComputeFeature(std::vector<Eigen::Vector3f> &points,
   hist_f1_.reserve(data_size);
   hist_f2_.reserve(data_size);
   hist_f3_.reserve(data_size);
+
+  // Setting up the SPFH histogram bins and lookup table, reserve alot in order to avoid
+  // growth during parallel processing
+  spfh_hist_lookup_.clear();
+  spfh_hist_lookup_.reserve(data_size * 3);
 
   static Eigen::VectorXf bin_f1 = Eigen::VectorXf::Zero(nr_bins_f1_);
   static Eigen::VectorXf bin_f2 = Eigen::VectorXf::Zero(nr_bins_f2_);
