@@ -1,11 +1,12 @@
-cmake_minimum_required(VERSION 3.16...3.24)
+cmake_minimum_required(VERSION 3.24)
 project(kiss_matcher VERSION 0.3.0 LANGUAGES CXX)
 
 option(USE_CCACHE "Build using Ccache if found on the path" ON)
 option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
-option(USE_SYSTEM_TBB "Use system pre-installed oneAPI/tbb" ON)
+option(USE_SYSTEM_TBB "Use system pre-installed oneAPI/tbb" OFF)
 option(USE_SYSTEM_ROBIN "Use system pre-installed ROBIN from SPARK @ MIT" ON)
 option(USE_ADDRESS_SANITIZER "Use address sanitizer" OFF)
+option(USE_THREAD_SANITIZER "Use thread sanitizer" OFF)
 
 # Set a default build type if none is specified
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -21,6 +22,10 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if (USE_ADDRESS_SANITIZER)
     add_compile_options(-fsanitize=address -fsanitize-recover=address)
     add_link_options(-fsanitize=address -fsanitize-recover=address)
+endif()
+if (USE_THREAD_SANITIZER)
+    add_compile_options(-fsanitize=thread)
+    add_link_options(-fsanitize=thread)
 endif()
 
 include(GNUInstallDirs)
@@ -43,7 +48,7 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall ${CMAKE_CXX_FLAGS}")
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/core)
 
 set(TARGET_NAME kiss_matcher_core)
-add_library(${TARGET_NAME} STATIC
+add_library(${TARGET_NAME} SHARED
     core/kiss_matcher/ROBINMatching.cpp
     core/kiss_matcher/FasterPFH.cpp
     core/kiss_matcher/KISSMatcher.cpp

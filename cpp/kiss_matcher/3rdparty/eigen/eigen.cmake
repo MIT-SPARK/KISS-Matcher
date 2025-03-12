@@ -29,7 +29,8 @@ set(EIGEN_BUILD_LAPACK OFF CACHE BOOL "Don't build lapack module")
 
 include(FetchContent)
 FetchContent_Declare(eigen URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.gz
-                     PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_LIST_DIR}/eigen.patch UPDATE_DISCONNECTED 1)
+                     PATCH_COMMAND patch -p1 < ${CMAKE_CURRENT_LIST_DIR}/eigen.patch UPDATE_DISCONNECTED 1
+                     OVERRIDE_FIND_PACKAGE)
 FetchContent_GetProperties(eigen)
 if(NOT eigen_POPULATED)
   FetchContent_Populate(eigen)

@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.8)
+cmake_minimum_required(VERSION 3.24)
 project(kiss_matcher_ros)
 
 # Set a default build type if none is specified
@@ -18,6 +18,11 @@ option(USE_ADDRESS_SANITIZER "Use address sanitizer" OFF)
 if (USE_ADDRESS_SANITIZER)
     add_compile_options(-fsanitize=address -fsanitize-recover=address)
     add_link_options(-fsanitize=address -fsanitize-recover=address)
+endif()
+option(USE_THREAD_SANITIZER "Use thread sanitizer" OFF)
+if (USE_THREAD_SANITIZER)
+    add_compile_options(-fsanitize=thread)
+    add_link_options(-fsanitize=thread)
 endif()
 
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/../cpp/kiss_matcher/ AND NOT IS_SYMLINK ${CMAKE_CURRENT_SOURCE_DIR})
@@ -39,7 +44,6 @@ find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(PCL REQUIRED)
-find_package(Eigen3 REQUIRED)
 find_package(tf2_ros REQUIRED)
 
 find_package(PCL REQUIRED)
@@ -54,10 +58,7 @@ target_include_directories(run_kiss_matcher
 )
 
 target_link_libraries(run_kiss_matcher
-    Eigen3::Eigen
-    TBB::tbb
     kiss_matcher::kiss_matcher_core
-    robin::robin
     ${PCL_LIBRARIES}
 )
 
@@ -68,13 +69,9 @@ ament_target_dependencies(registration_visualizer
   sensor_msgs
   pcl_conversions
   PCL
-  Eigen3
 )
 target_link_libraries(registration_visualizer
-  Eigen3::Eigen
-  TBB::tbb
   kiss_matcher::kiss_matcher_core
-  robin::robin
   ${PCL_LIBRARIES}
 )
 
