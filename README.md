@@ -37,6 +37,22 @@ cd KISS-Matcher
 make cppinstall
 ```
 
+> [!WARNING]
+> If you encounter the following error:
+>
+> ```
+> CMake Error: Not a file: ${your_directory}/KISS-Matcher/cpp/kiss_matcher/build/_deps/robin-build/cmake_install.cmake
+> CMake Error: Error processing file: ${your_directory}/KISS-Matcher/cpp/kiss_matcher/build/_deps/robin-build/cmake_install.cmake
+> make: *** [Makefile:42: cppinstall] Error 1
+> ```
+>
+> it means that the [ROBIN](https://github.com/MIT-SPARK/ROBIN) package is already installed in your environment.
+> In that case, simply run the following command:
+>
+> ```
+> make cppinstall_matcher_only
+> ```
+
 <details>
   <summary><strong>Q. How doest it work?</a></strong></summary>
 
