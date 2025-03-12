@@ -15,6 +15,7 @@ deps:
 # I used this one:
 # https://patorjk.com/software/taag/#p=display&f=ANSI%20Shadow
 ascii_art:
+	@echo " "
 	@echo "██╗  ██╗██╗███████╗███████╗      "
 	@echo "██║ ██╔╝██║██╔════╝██╔════╝      "
 	@echo "█████╔╝ ██║███████╗███████╗█████╗"
@@ -28,6 +29,7 @@ ascii_art:
 	@echo "██║╚██╔╝██║██╔══██║   ██║   ██║     ██╔══██║██╔══╝  ██╔══██╗"
 	@echo "██║ ╚═╝ ██║██║  ██║   ██║   ╚██████╗██║  ██║███████╗██║  ██║"
 	@echo "╚═╝     ╚═╝╚═╝  ╚═╝   ╚═╝    ╚═════╝╚═╝  ╚═╝╚══════╝╚═╝  ╚═╝"
+	@echo " "
 
 # Also install MIT-SPARK ROBIN
 # See https://github.com/MIT-SPARK/ROBIN
