@@ -6,7 +6,6 @@ option(USE_SYSTEM_EIGEN3 "Use system pre-installed Eigen" ON)
 option(USE_SYSTEM_TBB "Use system pre-installed oneAPI/tbb" OFF)
 option(USE_SYSTEM_ROBIN "Use system pre-installed ROBIN from SPARK @ MIT" ON)
 option(USE_ADDRESS_SANITIZER "Use address sanitizer" OFF)
-option(USE_THREAD_SANITIZER "Use thread sanitizer" OFF)
 
 # Set a default build type if none is specified
 if (NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
@@ -22,10 +21,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 if (USE_ADDRESS_SANITIZER)
     add_compile_options(-fsanitize=address -fsanitize-recover=address)
     add_link_options(-fsanitize=address -fsanitize-recover=address)
-endif()
-if (USE_THREAD_SANITIZER)
-    add_compile_options(-fsanitize=thread)
-    add_link_options(-fsanitize=thread)
 endif()
 
 include(GNUInstallDirs)
