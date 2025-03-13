@@ -203,7 +203,7 @@ void FasterPFH::ComputeFeature(std::vector<Eigen::Vector3f> &points,
   // Setting up the SPFH histogram bins and lookup table, reserve alot in order to avoid
   // growth during parallel processing
   spfh_hist_lookup_.clear();
-  spfh_hist_lookup_.reserve(data_size * 3);
+  spfh_hist_lookup_.reserve(data_size);
 
   static Eigen::VectorXf bin_f1 = Eigen::VectorXf::Zero(nr_bins_f1_);
   static Eigen::VectorXf bin_f2 = Eigen::VectorXf::Zero(nr_bins_f2_);
@@ -245,8 +245,11 @@ void FasterPFH::ComputeFeature(std::vector<Eigen::Vector3f> &points,
 
       for (size_t i = 0; i < indices.size(); ++i) {
         if (is_valid_[indices[i]]) {
-          nn_indices.emplace_back(spfh_hist_lookup_[indices[i]]);
-          nn_dists.emplace_back(dists[i]);
+          auto it = spfh_hist_lookup_.find(indices[i]);
+          if (it != spfh_hist_lookup_.end()) {
+            nn_indices.emplace_back(it->second);
+            nn_dists.emplace_back(dists[i]);
+          }
         }
       }
 
