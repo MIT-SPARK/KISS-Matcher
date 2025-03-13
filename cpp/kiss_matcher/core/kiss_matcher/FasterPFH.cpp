@@ -200,7 +200,7 @@ void FasterPFH::ComputeFeature(std::vector<Eigen::Vector3f> &points,
   hist_f2_.reserve(data_size);
   hist_f3_.reserve(data_size);
 
-  // Setting up the SPFH histogram bins and lookup table, reserve alot in order to avoid
+  // Setting up the SPFH histogram bins and lookup table, reserve to avoid
   // growth during parallel processing
   spfh_hist_lookup_.clear();
   spfh_hist_lookup_.reserve(data_size);
