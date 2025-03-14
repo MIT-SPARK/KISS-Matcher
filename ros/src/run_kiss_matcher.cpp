@@ -5,9 +5,53 @@
 #include <kiss_matcher/KISSMatcher.hpp>
 #include <pcl/filters/filter.h>
 #include <pcl/io/pcd_io.h>
+#include <pcl/io/ply_io.h>
 #include <pcl/common/transforms.h>
 #include <pcl/filters/voxel_grid.h>
 #include <pcl/visualization/pcl_visualizer.h>
+
+bool readBin(const std::string& filename, pcl::PointCloud<pcl::PointXYZ>& cloud) {
+  std::ifstream ifs(filename, std::ios::binary | std::ios::ate);
+  if (!ifs) {
+    std::cerr << "error: failed to open " << filename << std::endl;
+    return false;
+  }
+
+  std::streamsize points_bytes = ifs.tellg();
+  size_t num_points = points_bytes / (sizeof(Eigen::Vector4f));
+
+  ifs.seekg(0, std::ios::beg);
+  std::vector<Eigen::Vector4f> points(num_points);
+  ifs.read(reinterpret_cast<char*>(points.data()), sizeof(Eigen::Vector4f) * num_points);
+
+  cloud.clear();
+  cloud.reserve(num_points);
+
+  pcl::PointXYZ point;
+  for (auto& pt : points) {
+    point.x = pt(0);
+    point.y = pt(1);
+    point.z = pt(2);
+    cloud.emplace_back(point);
+  }
+
+  return true;
+}
+
+bool loadPointCloud(const std::string& filepath, pcl::PointCloud<pcl::PointXYZ>::Ptr cloud) {
+  std::string extension = std::filesystem::path(filepath).extension().string();
+
+  if (extension == ".pcd") {
+    return pcl::io::loadPCDFile<pcl::PointXYZ>(filepath, *cloud) >= 0;
+  } else if (extension == ".ply") {
+    return pcl::io::loadPLYFile<pcl::PointXYZ>(filepath, *cloud) >= 0;
+  } else if (extension == ".bin") {
+    return readBin(filepath, *cloud);
+  } else {
+    std::cerr << "Unsupported file format: " << extension << std::endl;
+    return false;
+  }
+}
 
 //#include "quatro/quatro_utils.h"
 void colorize(const pcl::PointCloud<pcl::PointXYZ> &pc,
@@ -83,8 +127,11 @@ int main(int argc, char** argv) {
 
   std::cout << "Source input: " << src_path << "\n";
   std::cout << "Target input: " << tgt_path << "\n";
-  int src_load_result = pcl::io::loadPCDFile<pcl::PointXYZ>(src_path, *src_pcl);
-  int tgt_load_result = pcl::io::loadPCDFile<pcl::PointXYZ>(tgt_path, *tgt_pcl);
+
+  if (!loadPointCloud(src_path, src_pcl) || !loadPointCloud(tgt_path, tgt_pcl)) {
+    std::cerr << "Error loading point cloud files." << std::endl;
+    return -1;
+  }
 
   std::vector<int> src_indices;
   std::vector<int> tgt_indices;
