@@ -3,11 +3,11 @@
 #include <kiss_matcher/FasterPFH.hpp>
 #include <kiss_matcher/GncSolver.hpp>
 #include <kiss_matcher/KISSMatcher.hpp>
+#include <pcl/common/transforms.h>
 #include <pcl/filters/filter.h>
+#include <pcl/filters/voxel_grid.h>
 #include <pcl/io/pcd_io.h>
 #include <pcl/io/ply_io.h>
-#include <pcl/common/transforms.h>
-#include <pcl/filters/voxel_grid.h>
 #include <pcl/visualization/pcl_visualizer.h>
 
 bool readBin(const std::string& filename, pcl::PointCloud<pcl::PointXYZ>& cloud) {
@@ -18,7 +18,7 @@ bool readBin(const std::string& filename, pcl::PointCloud<pcl::PointXYZ>& cloud)
   }
 
   std::streamsize points_bytes = ifs.tellg();
-  size_t num_points = points_bytes / (sizeof(Eigen::Vector4f));
+  size_t num_points            = points_bytes / (sizeof(Eigen::Vector4f));
 
   ifs.seekg(0, std::ios::beg);
   std::vector<Eigen::Vector4f> points(num_points);
@@ -53,16 +53,15 @@ bool loadPointCloud(const std::string& filepath, pcl::PointCloud<pcl::PointXYZ>:
   }
 }
 
-//#include "quatro/quatro_utils.h"
-void colorize(const pcl::PointCloud<pcl::PointXYZ> &pc,
-              pcl::PointCloud<pcl::PointXYZRGB> &pc_colored,
-              const std::vector<int> &color) {
+void colorize(const pcl::PointCloud<pcl::PointXYZ>& pc,
+              pcl::PointCloud<pcl::PointXYZRGB>& pc_colored,
+              const std::vector<int>& color) {
   int N = pc.points.size();
 
   pc_colored.clear();
   pcl::PointXYZRGB pt_tmp;
   for (int i = 0; i < N; ++i) {
-    const auto &pt = pc.points[i];
+    const auto& pt = pc.points[i];
     pt_tmp.x       = pt.x;
     pt_tmp.y       = pt.y;
     pt_tmp.z       = pt.z;
@@ -86,7 +85,8 @@ std::vector<Eigen::Vector3f> convertCloudToVec(const pcl::PointCloud<pcl::PointX
 int main(int argc, char** argv) {
   if (argc < 4) {
     std::cerr << "Usage: " << argv[0]
-              << " <src_pcd_file> <tgt_pcd_file> <resolution> <yaw_aug_angle> <roll_aug_angle>" << std::endl;
+              << " <src_pcd_file> <tgt_pcd_file> <resolution> <yaw_aug_angle> <roll_aug_angle>"
+              << std::endl;
     return -1;
   }
   pcl::PointCloud<pcl::PointXYZ>::Ptr src_pcl(new pcl::PointCloud<pcl::PointXYZ>);
@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
 
   Eigen::Matrix4f roll_transform = Eigen::Matrix4f::Identity();
   if (argc > 5) {
-    float roll_aug_angle = std::stof(argv[5]);             // Yaw angle in degrees
+    float roll_aug_angle = std::stof(argv[5]);              // Yaw angle in degrees
     float roll_rad       = roll_aug_angle * M_PI / 180.0f;  // Convert to radians
 
     roll_transform(1, 1) = std::cos(roll_rad);

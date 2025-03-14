@@ -17,7 +17,7 @@ bool readBin(const std::string& filename, pcl::PointCloud<pcl::PointXYZ>& cloud)
   }
 
   std::streamsize points_bytes = ifs.tellg();
-  size_t num_points = points_bytes / (sizeof(Eigen::Vector4f));
+  size_t num_points            = points_bytes / (sizeof(Eigen::Vector4f));
 
   ifs.seekg(0, std::ios::beg);
   std::vector<Eigen::Vector4f> points(num_points);
