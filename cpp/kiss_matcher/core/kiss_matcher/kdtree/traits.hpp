@@ -6,7 +6,7 @@
 
 #include <Eigen/Core>
 
-namespace small_gicp {
+namespace kiss_matcher {
 
 namespace traits {
 
@@ -69,4 +69,4 @@ size_t nearest_neighbor_search(const T& tree,
 
 }  // namespace traits
 
-}  // namespace small_gicp
+}  // namespace kiss_matcher

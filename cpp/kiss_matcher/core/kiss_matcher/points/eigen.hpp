@@ -3,7 +3,7 @@
 #pragma once
 
 #include <Eigen/Core>
-#include <small_gicp/points/traits.hpp>
+#include <kiss_matcher/points/traits.hpp>
 
 namespace kiss_matcher {
 namespace traits {
