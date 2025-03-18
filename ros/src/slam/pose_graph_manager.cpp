@@ -1,0 +1,579 @@
+#include "slam/pose_graph_manager.h"
+
+using namespace kiss_matcher;
+
+PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
+    : rclcpp::Node("km_sam", options) {
+  this->declare_parameter<std::string>("basic.map_frame", "map");
+  this->declare_parameter<double>("basic.loop_pub_hz", 0.1);
+  this->declare_parameter<double>("basic.loop_update_hz", 1.0);
+  this->declare_parameter<double>("basic.loop_pub_delayed_time", 60.0);
+  this->declare_parameter<double>("basic.vis_hz", 0.5);
+  this->declare_parameter<double>("save_voxel_resolution", 0.3);
+  this->declare_parameter<double>("quatro_nano_gicp_voxel_resolution", 0.3);
+  this->declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
+  this->declare_parameter<int>("keyframe.nusubmap_keyframes", 5);
+  this->declare_parameter<bool>("keyframe.enable_submap_matching", false);
+  this->declare_parameter<double>("loop.loop_detection_radius", 15.0);
+  this->declare_parameter<double>("loop.loop_detection_timediff_threshold", 10.0);
+
+  this->declare_parameter<int>("local_reg.num_threads", 4);
+  this->declare_parameter<int>("local_reg.correspondences_number", 15);
+  this->declare_parameter<int>("local_reg.max_iter", 32);
+  this->declare_parameter<double>("local_reg.transformation_epsilon", 0.01);
+  this->declare_parameter<double>("local_reg.euclidean_fitness_epsilon", 0.01);
+
+  this->declare_parameter<bool>("global_reg.enable", false);
+  this->declare_parameter<bool>("global_reg.optimize_matching", true);
+  this->declare_parameter<double>("global_reg.distance_threshold", 30.0);
+  this->declare_parameter<int>("global_reg.max_nucorrespondences", 200);
+
+  this->declare_parameter<bool>("result.save_map_bag", false);
+  this->declare_parameter<bool>("result.save_map_pcd", false);
+  this->declare_parameter<bool>("result.save_in_kitti_format", false);
+  this->declare_parameter<std::string>("result.seq_name", "");
+
+  auto node_base_interface    = this->get_node_base_interface();
+  auto node_clock_interface   = this->get_node_clock_interface();
+  auto node_logging_interface = this->get_node_logging_interface();
+
+  rclcpp::QoS qos(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default));
+  qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+  qos.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+
+  // TODO(hlim): Revive Broadccaster
+  // TransformBroadcaster 생성
+  // tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(
+  //   node_base_interface,
+  //   node_clock_interface,
+  //   node_logging_interface->get_logger(),
+  //   qos
+  // );
+
+  double loop_pub_hz, loop_update_hz, vis_hz;
+  LoopClosureConfig lc_config;
+  auto &gc = lc_config.gicp_config_;
+  auto &mc = lc_config.matcher_config_;
+
+  this->get_parameter("basic.map_frame", map_frame_);
+  this->get_parameter("basic.loop_pub_hz", loop_pub_hz);
+  this->get_parameter("basic.loop_update_hz", loop_update_hz);
+  this->get_parameter("basic.loop_pub_delayed_time", loop_pub_delayed_time_);
+  this->get_parameter("basic.vis_hz", vis_hz);
+  this->get_parameter("save_voxel_resolution", voxel_res_);
+  this->get_parameter("quatro_nano_gicp_voxel_resolution", lc_config.voxel_res_);
+  this->get_parameter("keyframe.keyframe_threshold", keyframe_thr_);
+  this->get_parameter("keyframe.nusubmap_keyframes", lc_config.num_submap_keyframes_);
+  this->get_parameter("keyframe.enable_submap_matching", lc_config.enable_submap_matching_);
+  this->get_parameter("loop.loop_detection_radius", lc_config.loop_detection_radius_);
+  this->get_parameter("loop.loop_detection_timediff_threshold",
+                      lc_config.loop_detection_timediff_threshold_);
+  this->get_parameter("loop.use_global_reg", lc_config.enable_quatro_);
+
+  gc.max_corr_dist_ = lc_config.loop_detection_radius_ * 1.5;
+
+  this->get_parameter("local_reg.num_threads", gc.num_threads_);
+  this->get_parameter("local_reg.correspondence_randomness", gc.correspondence_randomness_);
+  this->get_parameter("local_reg.max_num_iter", gc.max_num_iter_);
+  this->get_parameter("local_reg.icp_score_threshold", gc.icp_score_thr_);
+
+  this->get_parameter("result.save_map_bag", save_map_bag_);
+  this->get_parameter("result.save_map_pcd", save_map_pcd_);
+  this->get_parameter("result.save_in_kitti_format", save_in_kitti_format_);
+  this->get_parameter("result.seq_name", seq_name_);
+
+  package_path_ = "";
+
+  loop_closure_ = std::make_shared<LoopClosure>(lc_config);
+
+  gtsam::ISAM2Params isam_params_;
+  isam_params_.relinearizeThreshold = 0.01;
+  isam_params_.relinearizeSkip      = 1;
+  isam_handler_                     = std::make_shared<gtsam::ISAM2>(isam_params_);
+
+  odom_path_.header.frame_id      = map_frame_;
+  corrected_path_.header.frame_id = map_frame_;
+
+  odom_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/ori_odom", 10);
+  path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/ori_path", 10);
+  corrected_odom_pub_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("/corrected_odom", 10);
+  corrected_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/corrected_path", 10);
+  corrected_pcd_map_pub_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("/corrected_map", 10);
+  corrected_current_pcd_pub_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("/corrected_current_pcd", 10);
+  loop_detection_pub_ =
+      this->create_publisher<visualization_msgs::msg::Marker>("/loop_detection", 10);
+  // loop_closures_pub_ =
+  // this->create_publisher<pose_graph_tools_msgs::msg::PoseGraph>("/hydra_ros_node/external_loop_closures",
+  // 10);
+  realtime_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/pose_stamped", 10);
+  debug_src_pub_     = this->create_publisher<sensor_msgs::msg::PointCloud2>("/src", 10);
+  debug_dst_pub_     = this->create_publisher<sensor_msgs::msg::PointCloud2>("/dst", 10);
+  debug_coarse_aligned_pub_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("/coarse_aligned_quatro", 10);
+  debug_fine_aligned_pub_ =
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("/fine_aligned_nano_gicp", 10);
+
+  sub_odom_ =
+      std::make_shared<message_filters::Subscriber<nav_msgs::msg::Odometry>>(this, "/Odometry");
+  sub_pcd_ = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(
+      this, "/cloud_registered");
+
+  sub_odom_pcd_sync_ = std::make_shared<message_filters::Synchronizer<odom_pcd_sync_pol>>(
+      odom_pcd_sync_pol(10), *sub_odom_, *sub_pcd_);
+  sub_odom_pcd_sync_->registerCallback(std::bind(
+      &PoseGraphManager::odomPcdCallback, this, std::placeholders::_1, std::placeholders::_2));
+
+  sub_save_flag_ = this->create_subscription<std_msgs::msg::String>(
+      "/save_dir", 1, std::bind(&PoseGraphManager::saveFlagCallback, this, std::placeholders::_1));
+
+  // loop_pub_timer_ = this->create_wall_timer(
+  //   std::chrono::duration<double>(1.0 / loop_pub_hz),
+  //   std::bind(&PoseGraphManager::loopPubTimerFunc, this));
+
+  loop_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_update_hz),
+                                        std::bind(&PoseGraphManager::loopTimerFunc, this));
+
+  vis_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),
+                                       std::bind(&PoseGraphManager::visTimerFunc, this));
+
+  RCLCPP_INFO(this->get_logger(), "Main class, starting node...");
+}
+
+void PoseGraphManager::odomPcdCallback(
+    const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
+    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg) {
+  Eigen::Matrix4d last_odom_tf = current_frame_.pose_;
+  current_frame_               = PoseGraphNode(*odom_msg, *pcd_msg, current_keyframe_idx_);
+
+  auto t1 = high_resolution_clock::now();
+
+  {
+    std::lock_guard<std::mutex> lock(realtime_pose_mutex_);
+    odom_delta_                    = odom_delta_ * last_odom_tf.inverse() * current_frame_.pose_;
+    current_frame_.pose_corrected_ = last_corrected_pose_ * odom_delta_;
+
+    geometry_msgs::msg::PoseStamped ps =
+        poseEigToPoseStamped(current_frame_.pose_corrected_, map_frame_);
+    realtime_pose_pub_->publish(ps);
+
+    // geometry_msgs::msg::TransformStamped transform_stamped;
+    // transform_stamped.header.stamp = this->now();
+    // transform_stamped.header.frame_id = map_frame_;
+    // transform_stamped.child_frame_id = "robot";
+    // Eigen::Quaterniond q(current_frame_.pose_corrected_.block<3,3>(0,0));
+    // transform_stamped.transform.translation.x = current_frame_.pose_corrected_(0, 3);
+    // transform_stamped.transform.translation.y = current_frame_.pose_corrected_(1, 3);
+    // transform_stamped.transform.translation.z = current_frame_.pose_corrected_(2, 3);
+    // transform_stamped.transform.rotation.x = q.x();
+    // transform_stamped.transform.rotation.y = q.y();
+    // transform_stamped.transform.rotation.z = q.z();
+    // transform_stamped.transform.rotation.w = q.w();
+    // tf_broadcaster_->sendTransform(transform_stamped);
+  }
+
+  corrected_current_pcd_pub_->publish(
+      pclToPclRos(transformPcd(current_frame_.scan_, current_frame_.pose_corrected_), map_frame_));
+
+  if (!is_initialized_) {
+    keyframes_.push_back(current_frame_);
+    updateOdomsAndPaths(current_frame_);
+
+    auto variance_vector = (gtsam::Vector(6) << 1e-4, 1e-4, 1e-4, 1e-2, 1e-2, 1e-2).finished();
+    gtsam::noiseModel::Diagonal::shared_ptr prior_noise =
+        gtsam::noiseModel::Diagonal::Variances(variance_vector);
+
+    gtsam_graph_.add(
+        gtsam::PriorFactor<gtsam::Pose3>(0, poseEigToGtsamPose(current_frame_.pose_), prior_noise));
+
+    init_esti_.insert(current_keyframe_idx_, poseEigToGtsamPose(current_frame_.pose_));
+    current_keyframe_idx_++;
+    is_initialized_ = true;
+
+  } else {
+    auto t2 = high_resolution_clock::now();
+    if (checkIfKeyframe(current_frame_, keyframes_.back())) {
+      {
+        std::lock_guard<std::mutex> lock(keyframes_mutex_);
+        keyframes_.push_back(current_frame_);
+      }
+
+      auto variance_vector = (gtsam::Vector(6) << 1e-4, 1e-4, 1e-4, 1e-2, 1e-2, 1e-2).finished();
+      gtsam::noiseModel::Diagonal::shared_ptr odom_noise =
+          gtsam::noiseModel::Diagonal::Variances(variance_vector);
+
+      gtsam::Pose3 pose_from =
+          poseEigToGtsamPose(keyframes_[current_keyframe_idx_ - 1].pose_corrected_);
+      gtsam::Pose3 pose_to = poseEigToGtsamPose(current_frame_.pose_corrected_);
+
+      {
+        std::lock_guard<std::mutex> lock(graph_mutex_);
+        gtsam_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(current_keyframe_idx_ - 1,
+                                                            current_keyframe_idx_,
+                                                            pose_from.between(pose_to),
+                                                            odom_noise));
+        init_esti_.insert(current_keyframe_idx_, pose_to);
+      }
+
+      current_keyframe_idx_++;
+      auto t3 = high_resolution_clock::now();
+      {
+        std::lock_guard<std::mutex> lock(vis_mutex_);
+        updateOdomsAndPaths(current_frame_);
+      }
+
+      auto t4 = high_resolution_clock::now();
+      {
+        std::lock_guard<std::mutex> lock(graph_mutex_);
+        isam_handler_->update(gtsam_graph_, init_esti_);
+        isam_handler_->update();
+        if (loop_added_flag_) {
+          isam_handler_->update();
+          isam_handler_->update();
+          isam_handler_->update();
+        }
+        gtsam_graph_.resize(0);
+        init_esti_.clear();
+      }
+
+      auto t5 = high_resolution_clock::now();
+      {
+        std::lock_guard<std::mutex> lock(realtime_pose_mutex_);
+        corrected_esti_ = isam_handler_->calculateEstimate();
+        last_corrected_pose_ =
+            gtsamPoseToPoseEig(corrected_esti_.at<gtsam::Pose3>(corrected_esti_.size() - 1));
+        odom_delta_ = Eigen::Matrix4d::Identity();
+      }
+      if (loop_added_flag_) {
+        std::lock_guard<std::mutex> lock(keyframes_mutex_);
+        for (size_t i = 0; i < corrected_esti_.size(); ++i) {
+          keyframes_[i].pose_corrected_ = gtsamPoseToPoseEig(corrected_esti_.at<gtsam::Pose3>(i));
+        }
+        loop_added_flag_ = false;
+      }
+      auto t6 = high_resolution_clock::now();
+
+      auto ms12 = duration_cast<microseconds>(t2 - t1).count() / 1e3;
+      auto ms23 = duration_cast<microseconds>(t3 - t2).count() / 1e3;
+      auto ms34 = duration_cast<microseconds>(t4 - t3).count() / 1e3;
+      auto ms45 = duration_cast<microseconds>(t5 - t4).count() / 1e3;
+      auto ms56 = duration_cast<microseconds>(t6 - t5).count() / 1e3;
+      auto ms16 = duration_cast<microseconds>(t6 - t1).count() / 1e3;
+
+      RCLCPP_INFO(this->get_logger(),
+                  "real: %.1f, key_add: %.1f, vis: %.1f, opt: %.1f, res: %.1f, tot: %.1fms, # "
+                  "keyframes: %i",
+                  ms12,
+                  ms23,
+                  ms34,
+                  ms45,
+                  ms56,
+                  ms16,
+                  static_cast<int>(keyframes_.size()));
+    }
+  }
+}
+
+// void PoseGraphManager::loopPubTimerFunc()
+// {
+//   if (loop_msgs_.edges.empty()) {
+//     RCLCPP_WARN(this->get_logger(),
+//       "`loop_msgs_.edges` is empty. Skipping loop closure publishing.");
+//     return;
+//   }
+//   if (last_lc_time_ + loop_pub_delayed_time_ < this->now().seconds()) {
+//     loop_closures_pub_->publish(loop_msgs_);
+//     loop_msgs_.nodes.clear();
+//     loop_msgs_.edges.clear();
+//     RCLCPP_INFO(this->get_logger(), "`loop_msgs_` is successfully published!");
+//     return;
+//   }
+// }
+
+void PoseGraphManager::loopTimerFunc() {
+  if (!is_initialized_ || keyframes_.empty() || keyframes_.back().processed_) {
+    return;
+  }
+  keyframes_.back().processed_ = true;
+
+  auto t1 = high_resolution_clock::now();
+  const int closest_keyframe_idx =
+      loop_closure_->fetchClosestKeyframeIdx(keyframes_.back(), keyframes_);
+  if (closest_keyframe_idx < 0) {
+    return;
+  }
+
+  const RegOutput &reg_output =
+      loop_closure_->performLoopClosure(keyframes_.back(), keyframes_, closest_keyframe_idx);
+
+  if (reg_output.is_valid_) {
+    RCLCPP_INFO(this->get_logger(), "Loop closure accepted. Score: %.3f", reg_output.score_);
+    const auto &score = reg_output.score_;
+    gtsam::Pose3 pose_from =
+        poseEigToGtsamPose(reg_output.pose_ * keyframes_.back().pose_corrected_);
+    gtsam::Pose3 pose_to = poseEigToGtsamPose(keyframes_[closest_keyframe_idx].pose_corrected_);
+
+    auto variance_vector =
+        (gtsam::Vector(6) << score, score, score, score, score, score).finished();
+    gtsam::noiseModel::Diagonal::shared_ptr loop_noise =
+        gtsam::noiseModel::Diagonal::Variances(variance_vector);
+
+    {
+      std::lock_guard<std::mutex> lock(graph_mutex_);
+      gtsam_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(
+          keyframes_.back().idx_, closest_keyframe_idx, pose_from.between(pose_to), loop_noise));
+    }
+
+    loop_idx_pairs_.push_back({keyframes_.back().idx_, closest_keyframe_idx});
+    loop_added_flag_vis_ = true;
+    loop_added_flag_     = true;
+
+    // --------------------------------------------------
+    // TODO(hlim): resurrect pose_graph_tools_msgs
+    // pose_graph_tools_msgs::msg::PoseGraphEdge edge;
+    // double lidar_end_time_compensation = 0.1;
+    // edge.header.stamp = this->now();
+    // edge.robot_from = 0;
+    // edge.robot_to = 0;
+    // edge.type = 1;
+
+    // edge.key_to = static_cast<uint64_t>(
+    //   (keyframes_.back().timestamp_ - lidar_end_time_compensation) * 1e9);
+    // edge.key_from = static_cast<uint64_t>(
+    //   (keyframes_[closest_keyframe_idx].timestamp_ - lidar_end_time_compensation) * 1e9);
+
+    // Eigen::Matrix4d pose_inv = pose_to.matrix().inverse() * pose_from.matrix();
+    // edge.pose = poseEigToPoseGeo(pose_inv);
+    // loop_msgs_.edges.emplace_back(edge);
+    // last_lc_time_ = this->now().seconds();
+    // --------------------------------------------------
+
+  } else {
+    RCLCPP_WARN(this->get_logger(), "Loop closure rejected. Score: %.3f", reg_output.score_);
+  }
+
+  auto t2 = high_resolution_clock::now();
+  debug_src_pub_->publish(pclToPclRos(loop_closure_->getSourceCloud(), map_frame_));
+  debug_dst_pub_->publish(pclToPclRos(loop_closure_->getTargetCloud(), map_frame_));
+  debug_fine_aligned_pub_->publish(pclToPclRos(loop_closure_->getFinalAlignedCloud(), map_frame_));
+  debug_coarse_aligned_pub_->publish(
+      pclToPclRos(loop_closure_->getCoarseAlignedCloud(), map_frame_));
+
+  RCLCPP_INFO(this->get_logger(), "loop: %.1f", duration_cast<microseconds>(t2 - t1).count() / 1e3);
+}
+
+void PoseGraphManager::visTimerFunc() {
+  if (!is_initialized_) {
+    return;
+  }
+
+  auto tv1 = high_resolution_clock::now();
+  if (loop_added_flag_vis_) {
+    gtsam::Values corrected_esti_copied;
+    pcl::PointCloud<pcl::PointXYZ> corrected_odoms;
+    nav_msgs::msg::Path corrected_path;
+
+    {
+      std::lock_guard<std::mutex> lock(realtime_pose_mutex_);
+      corrected_esti_copied = corrected_esti_;
+    }
+    for (size_t i = 0; i < corrected_esti_copied.size(); ++i) {
+      gtsam::Pose3 pose_ = corrected_esti_copied.at<gtsam::Pose3>(i);
+      corrected_odoms.points.emplace_back(
+          pose_.translation().x(), pose_.translation().y(), pose_.translation().z());
+
+      corrected_path.poses.push_back(gtsamPoseToPoseStamped(pose_, map_frame_));
+    }
+    if (!loop_idx_pairs_.empty()) {
+      loop_detection_pub_->publish(getLoopMarkers(corrected_esti_copied));
+    }
+    {
+      std::lock_guard<std::mutex> lock(vis_mutex_);
+      corrected_odoms_      = corrected_odoms;
+      corrected_path_.poses = corrected_path.poses;
+    }
+    loop_added_flag_vis_ = false;
+  }
+  {
+    std::lock_guard<std::mutex> lock(vis_mutex_);
+    odom_pub_->publish(pclToPclRos(odoms_, map_frame_));
+    path_pub_->publish(odom_path_);
+    corrected_odom_pub_->publish(pclToPclRos(corrected_odoms_, map_frame_));
+    corrected_path_pub_->publish(corrected_path_);
+  }
+  if (global_map_vis_switch_ && (corrected_pcd_map_pub_->get_subscription_count() > 0)) {
+    pcl::PointCloud<PointType>::Ptr corrected_map(new pcl::PointCloud<PointType>());
+    corrected_map->reserve(keyframes_[0].scan_.size() * keyframes_.size());
+
+    {
+      std::lock_guard<std::mutex> lock(keyframes_mutex_);
+      for (size_t i = 0; i < keyframes_.size(); ++i) {
+        *corrected_map += transformPcd(keyframes_[i].scan_, keyframes_[i].pose_corrected_);
+      }
+    }
+    const auto &voxelized_map = voxelize(corrected_map, voxel_res_);
+    corrected_pcd_map_pub_->publish(pclToPclRos(*voxelized_map, map_frame_));
+    global_map_vis_switch_ = false;
+  }
+  if (!global_map_vis_switch_ && (corrected_pcd_map_pub_->get_subscription_count() == 0)) {
+    global_map_vis_switch_ = true;
+  }
+  auto tv2 = high_resolution_clock::now();
+  RCLCPP_INFO(
+      this->get_logger(), "vis: %.1fms", duration_cast<microseconds>(tv2 - tv1).count() / 1e3);
+}
+
+void PoseGraphManager::saveFlagCallback(const std_msgs::msg::String::ConstSharedPtr &msg) {
+  std::string save_dir        = !msg->data.empty() ? msg->data : package_path_;
+  std::string seq_directory   = save_dir + "/" + seq_name_;
+  std::string scans_directory = seq_directory + "/scans";
+
+  if (save_in_kitti_format_) {
+    RCLCPP_INFO(this->get_logger(),
+                "Scans are saved in %s, following the KITTI and TUM format",
+                scans_directory.c_str());
+
+    if (fs::exists(seq_directory)) {
+      fs::remove_all(seq_directory);
+    }
+    fs::create_directories(scans_directory);
+
+    std::ofstream kitti_pose_file(seq_directory + "/poses_kitti.txt");
+    std::ofstream tum_pose_file(seq_directory + "/poses_tum.txt");
+    tum_pose_file << "#timestamp x y z qx qy qz qw\n";
+
+    {
+      std::lock_guard<std::mutex> lock(keyframes_mutex_);
+      for (size_t i = 0; i < keyframes_.size(); ++i) {
+        std::stringstream ss_;
+        ss_ << scans_directory << "/" << std::setw(6) << std::setfill('0') << i << ".pcd";
+        RCLCPP_INFO(this->get_logger(), "Saving %s...", ss_.str().c_str());
+        pcl::io::savePCDFileASCII<PointType>(ss_.str(), keyframes_[i].scan_);
+
+        const auto &pose_ = keyframes_[i].pose_corrected_;
+        kitti_pose_file << pose_(0, 0) << " " << pose_(0, 1) << " " << pose_(0, 2) << " "
+                        << pose_(0, 3) << " " << pose_(1, 0) << " " << pose_(1, 1) << " "
+                        << pose_(1, 2) << " " << pose_(1, 3) << " " << pose_(2, 0) << " "
+                        << pose_(2, 1) << " " << pose_(2, 2) << " " << pose_(2, 3) << "\n";
+
+        const auto &lidar_optim_pose_ = poseEigToPoseStamped(keyframes_[i].pose_corrected_);
+        tum_pose_file << std::fixed << std::setprecision(8) << keyframes_[i].timestamp_ << " "
+                      << lidar_optim_pose_.pose.position.x << " "
+                      << lidar_optim_pose_.pose.position.y << " "
+                      << lidar_optim_pose_.pose.position.z << " "
+                      << lidar_optim_pose_.pose.orientation.x << " "
+                      << lidar_optim_pose_.pose.orientation.y << " "
+                      << lidar_optim_pose_.pose.orientation.z << " "
+                      << lidar_optim_pose_.pose.orientation.w << "\n";
+      }
+    }
+    kitti_pose_file.close();
+    tum_pose_file.close();
+    RCLCPP_INFO(this->get_logger(), "Scans and poses saved in .pcd and KITTI format");
+  }
+  if (save_map_bag_) {
+    RCLCPP_INFO(this->get_logger(),
+                "NOTE(hlim): rosbag2 saving not directly implemented; skipping.");
+  }
+  if (save_map_pcd_) {
+    pcl::PointCloud<PointType>::Ptr corrected_map(new pcl::PointCloud<PointType>());
+    corrected_map->reserve(keyframes_[0].scan_.size() * keyframes_.size());
+
+    {
+      std::lock_guard<std::mutex> lock(keyframes_mutex_);
+      for (size_t i = 0; i < keyframes_.size(); ++i) {
+        *corrected_map += transformPcd(keyframes_[i].scan_, keyframes_[i].pose_corrected_);
+      }
+    }
+    const auto &voxelized_map = voxelize(corrected_map, voxel_res_);
+    pcl::io::savePCDFileASCII<PointType>(seq_directory + "/" + seq_name_ + "_map.pcd",
+                                         *voxelized_map);
+    RCLCPP_INFO(this->get_logger(), "Accumulated map cloud saved in .pcd format");
+  }
+}
+
+PoseGraphManager::~PoseGraphManager() {
+  if (save_map_bag_) {
+    RCLCPP_INFO(this->get_logger(), "NOTE(hlim): skipping final bag save in ROS2 example code.");
+  }
+  if (save_map_pcd_) {
+    pcl::PointCloud<PointType>::Ptr corrected_map(new pcl::PointCloud<PointType>());
+    corrected_map->reserve(keyframes_[0].scan_.size() * keyframes_.size());
+
+    {
+      std::lock_guard<std::mutex> lock(keyframes_mutex_);
+      for (size_t i = 0; i < keyframes_.size(); ++i) {
+        *corrected_map += transformPcd(keyframes_[i].scan_, keyframes_[i].pose_corrected_);
+      }
+    }
+    const auto &voxelized_map = voxelize(corrected_map, voxel_res_);
+    pcl::io::savePCDFileASCII<PointType>(package_path_ + "/result.pcd", *voxelized_map);
+    RCLCPP_INFO(this->get_logger(), "Result saved in .pcd format (Destructor).");
+  }
+}
+
+void PoseGraphManager::updateOdomsAndPaths(const PoseGraphNode &pose_pcd_in) {
+  odoms_.points.emplace_back(
+      pose_pcd_in.pose_(0, 3), pose_pcd_in.pose_(1, 3), pose_pcd_in.pose_(2, 3));
+
+  corrected_odoms_.points.emplace_back(pose_pcd_in.pose_corrected_(0, 3),
+                                       pose_pcd_in.pose_corrected_(1, 3),
+                                       pose_pcd_in.pose_corrected_(2, 3));
+
+  odom_path_.poses.emplace_back(poseEigToPoseStamped(pose_pcd_in.pose_, map_frame_));
+  corrected_path_.poses.emplace_back(poseEigToPoseStamped(pose_pcd_in.pose_corrected_, map_frame_));
+  return;
+}
+
+visualization_msgs::msg::Marker PoseGraphManager::getLoopMarkers(
+    const gtsam::Values &corrected_esti_in) {
+  visualization_msgs::msg::Marker edges;
+  edges.type               = visualization_msgs::msg::Marker::LINE_LIST;
+  edges.scale.x            = 0.12f;
+  edges.header.frame_id    = map_frame_;
+  edges.pose.orientation.w = 1.0f;
+  edges.color.r            = 1.0f;
+  edges.color.g            = 1.0f;
+  edges.color.b            = 1.0f;
+  edges.color.a            = 1.0f;
+
+  for (size_t i = 0; i < loop_idx_pairs_.size(); ++i) {
+    if (loop_idx_pairs_[i].first >= corrected_esti_in.size() ||
+        loop_idx_pairs_[i].second >= corrected_esti_in.size()) {
+      continue;
+    }
+    gtsam::Pose3 pose  = corrected_esti_in.at<gtsam::Pose3>(loop_idx_pairs_[i].first);
+    gtsam::Pose3 pose2 = corrected_esti_in.at<gtsam::Pose3>(loop_idx_pairs_[i].second);
+
+    geometry_msgs::msg::Point p, p2;
+    p.x  = pose.translation().x();
+    p.y  = pose.translation().y();
+    p.z  = pose.translation().z();
+    p2.x = pose2.translation().x();
+    p2.y = pose2.translation().y();
+    p2.z = pose2.translation().z();
+
+    edges.points.push_back(p);
+    edges.points.push_back(p2);
+  }
+  return edges;
+}
+
+bool PoseGraphManager::checkIfKeyframe(const PoseGraphNode &pose_pcd_in,
+                                       const PoseGraphNode &latest_pose_pcd) {
+  return keyframe_thr_ < (latest_pose_pcd.pose_corrected_.block<3, 1>(0, 3) -
+                          pose_pcd_in.pose_corrected_.block<3, 1>(0, 3))
+                             .norm();
+}
+
+// ----------------------------------------------------------------------
+
+int main(int argc, char *argv[]) {
+  rclcpp::init(argc, argv);
+  rclcpp::NodeOptions options;
+  rclcpp::spin(std::make_shared<PoseGraphManager>(options));
+  rclcpp::shutdown();
+  return 0;
+}

@@ -1,0 +1,95 @@
+#pragma once
+
+#ifndef KISS_MATCHER_LOOP_CLOSURE_H
+#define KISS_MATCHER_LOOP_CLOSURE_H
+
+///// C++ common headers
+#include <iostream>
+#include <limits>
+#include <memory>
+#include <tuple>
+#include <vector>
+
+#include <Eigen/Eigen>
+#include <kiss_matcher/KISSMatcher.hpp>
+#include <pcl/point_cloud.h>
+#include <pcl/point_types.h>
+#include <small_gicp/pcl/pcl_point.hpp>
+#include <small_gicp/pcl/pcl_point_traits.hpp>
+#include <small_gicp/pcl/pcl_registration.hpp>
+
+#include "slam/pose_graph_node.hpp"
+#include "slam/utils.hpp"
+
+using NodePair = std::tuple<pcl::PointCloud<PointType>, pcl::PointCloud<PointType>>;
+
+namespace kiss_matcher {
+struct GICPConfig {
+  int num_threads_               = 4;
+  int correspondence_randomness_ = 20;
+  int max_num_iter_              = 20;
+  double max_corr_dist_          = 1.0;
+  double icp_score_thr_          = 0.5;
+};
+
+struct LoopClosureConfig {
+  bool enable_quatro_          = true;
+  bool enable_submap_matching_ = true;
+  int num_submap_keyframes_    = 10;
+  double voxel_res_            = 0.1;
+  double loop_detection_radius_;
+  double loop_detection_timediff_threshold_;
+  GICPConfig gicp_config_;
+  KISSMatcherConfig matcher_config_;
+};
+
+// Registration Output
+struct RegOutput {
+  bool is_valid_        = false;
+  bool is_converged_    = false;
+  double score_         = std::numeric_limits<double>::max();
+  Eigen::Matrix4d pose_ = Eigen::Matrix4d::Identity();
+};
+
+class LoopClosure {
+ private:
+  // For coarse-to-fine alignment
+  std::shared_ptr<kiss_matcher::KISSMatcher> global_reg_handler_                        = nullptr;
+  std::shared_ptr<small_gicp::RegistrationPCL<PointType, PointType>> local_reg_handler_ = nullptr;
+
+  int closest_keyframe_idx_ = -1;
+  pcl::PointCloud<PointType>::Ptr src_cloud_;
+  pcl::PointCloud<PointType>::Ptr tgt_cloud_;
+  pcl::PointCloud<PointType> coarse_aligned_;
+  pcl::PointCloud<PointType> aligned_;
+  LoopClosureConfig config_;
+
+ public:
+  explicit LoopClosure(const LoopClosureConfig &config);
+  ~LoopClosure();
+  int fetchClosestKeyframeIdx(const PoseGraphNode &query_keyframe,
+                              const std::vector<PoseGraphNode> &keyframes);
+  NodePair setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyframes,
+                             const int src_idx,
+                             const int tgt_idx,
+                             const int submap_range,
+                             const double voxel_res,
+                             const bool enable_quatro,
+                             const bool enable_submap_matching);
+  RegOutput icpAlignment(const pcl::PointCloud<PointType> &src,
+                         const pcl::PointCloud<PointType> &tgt);
+  RegOutput coarseToFineAlignment(const pcl::PointCloud<PointType> &src,
+                                  const pcl::PointCloud<PointType> &tgt);
+  RegOutput performLoopClosure(const PoseGraphNode &query_keyframe,
+                               const std::vector<PoseGraphNode> &keyframes);
+  RegOutput performLoopClosure(const PoseGraphNode &query_keyframe,
+                               const std::vector<PoseGraphNode> &keyframes,
+                               const int closest_keyframe_idx);
+  pcl::PointCloud<PointType> getSourceCloud();
+  pcl::PointCloud<PointType> getTargetCloud();
+  pcl::PointCloud<PointType> getCoarseAlignedCloud();
+  pcl::PointCloud<PointType> getFinalAlignedCloud();
+  int getClosestKeyframeidx();
+};
+}  // namespace kiss_matcher
+#endif  // KISS_MATCHER_LOOP_CLOSURE_H
