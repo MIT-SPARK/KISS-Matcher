@@ -34,18 +34,42 @@ else()
     #FetchContent_MakeAvailable(ext_kiss_matcher_core)
 endif()
 
+# Load small_gicp
+include(FetchContent)
+FetchContent_Declare(
+  small_gicp
+  GIT_REPOSITORY https://github.com/koide3/small_gicp
+  GIT_TAG master
+)
+FetchContent_MakeAvailable(small_gicp)
+
 find_package(ament_cmake REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(rcutils REQUIRED)
 find_package(rclcpp REQUIRED)
+find_package(rclcpp_components REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 find_package(pcl_conversions REQUIRED)
 find_package(PCL REQUIRED)
 find_package(tf2_ros REQUIRED)
+find_package(tf2_eigen REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(tf2_sensor_msgs REQUIRED)
 
 find_package(PCL REQUIRED)
-include_directories(${PCL_INCLUDE_DIRS})
+include_directories(
+    include
+    src
+    ${PCL_INCLUDE_DIRS})
 link_directories(${PCL_LIBRARY_DIRS})
 add_definitions(${PCL_DEFINITIONS})
 
+find_package(GTSAM REQUIRED)
+
+################################################################################
 add_executable(run_kiss_matcher src/run_kiss_matcher.cpp)
 target_include_directories(run_kiss_matcher
     PUBLIC
@@ -70,13 +94,31 @@ target_link_libraries(registration_visualizer
   ${PCL_LIBRARIES}
 )
 
+add_executable(pose_graph_manager src/slam/pose_graph_manager.cpp src/slam/loop_closure.cpp)
+ament_target_dependencies(pose_graph_manager
+  rclcpp
+  tf2_ros
+  sensor_msgs
+  nav_msgs
+  visualization_msgs
+  pcl_conversions
+  PCL
+)
+target_link_libraries(pose_graph_manager
+  kiss_matcher::kiss_matcher_core
+  ${PCL_LIBRARIES}
+  small_gicp
+  gtsam
+)
+
 install(TARGETS
   registration_visualizer
   run_kiss_matcher
+  pose_graph_manager
   DESTINATION lib/${PROJECT_NAME}
 )
 
-install(DIRECTORY launch config
+install(DIRECTORY launch config rviz
   DESTINATION share/${PROJECT_NAME}
 )
 
