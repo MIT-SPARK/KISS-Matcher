@@ -94,8 +94,8 @@ target_link_libraries(registration_visualizer
   ${PCL_LIBRARIES}
 )
 
-add_executable(pose_graph_manager src/slam/pose_graph_manager.cpp src/slam/loop_closure.cpp)
-ament_target_dependencies(pose_graph_manager
+add_executable(kiss_matcher_sam src/slam/pose_graph_manager.cpp src/slam/loop_closure.cpp)
+ament_target_dependencies(kiss_matcher_sam
   rclcpp
   tf2_ros
   sensor_msgs
@@ -104,7 +104,7 @@ ament_target_dependencies(pose_graph_manager
   pcl_conversions
   PCL
 )
-target_link_libraries(pose_graph_manager
+target_link_libraries(kiss_matcher_sam
   kiss_matcher::kiss_matcher_core
   ${PCL_LIBRARIES}
   small_gicp
@@ -114,7 +114,7 @@ target_link_libraries(pose_graph_manager
 install(TARGETS
   registration_visualizer
   run_kiss_matcher
-  pose_graph_manager
+  kiss_matcher_sam
   DESTINATION lib/${PROJECT_NAME}
 )
 
