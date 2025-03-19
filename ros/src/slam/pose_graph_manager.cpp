@@ -4,83 +4,62 @@ using namespace kiss_matcher;
 
 PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
     : rclcpp::Node("km_sam", options) {
-  this->declare_parameter<std::string>("basic.map_frame", "map");
-  this->declare_parameter<double>("basic.loop_pub_hz", 0.1);
-  this->declare_parameter<double>("basic.loop_update_hz", 1.0);
-  this->declare_parameter<double>("basic.loop_pub_delayed_time", 60.0);
-  this->declare_parameter<double>("basic.vis_hz", 0.5);
-  this->declare_parameter<double>("save_voxel_resolution", 0.3);
-  this->declare_parameter<double>("quatro_nano_gicp_voxel_resolution", 0.3);
-  this->declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
-  this->declare_parameter<int>("keyframe.nusubmap_keyframes", 5);
-  this->declare_parameter<bool>("keyframe.enable_submap_matching", false);
-  this->declare_parameter<double>("loop.loop_detection_radius", 15.0);
-  this->declare_parameter<double>("loop.loop_detection_timediff_threshold", 10.0);
+  double loop_pub_hz, loop_update_hz, vis_hz;
+  LoopClosureConfig lc_config;
+  auto &gc = lc_config.gicp_config_;
+  auto &mc = lc_config.matcher_config_;
 
-  this->declare_parameter<int>("local_reg.num_threads", 4);
-  this->declare_parameter<int>("local_reg.correspondences_number", 15);
-  this->declare_parameter<int>("local_reg.max_iter", 32);
-  this->declare_parameter<double>("local_reg.transformation_epsilon", 0.01);
-  this->declare_parameter<double>("local_reg.euclidean_fitness_epsilon", 0.01);
+  map_frame_             = declare_parameter<std::string>("basic.map_frame", "map");
+  loop_pub_hz            = declare_parameter<double>("basic.loop_pub_hz", 0.1);
+  loop_update_hz         = declare_parameter<double>("basic.loop_update_hz", 1.0);
+  loop_pub_delayed_time_ = declare_parameter<double>("basic.loop_pub_delayed_time", 60.0);
+  vis_hz                 = declare_parameter<double>("basic.vis_hz", 0.5);
 
-  this->declare_parameter<bool>("global_reg.enable", false);
-  this->declare_parameter<bool>("global_reg.optimize_matching", true);
-  this->declare_parameter<double>("global_reg.distance_threshold", 30.0);
-  this->declare_parameter<int>("global_reg.max_nucorrespondences", 200);
+  voxel_res_           = declare_parameter<double>("save_voxel_resolution", 0.3);
+  lc_config.voxel_res_ = declare_parameter<double>("quatro_nano_gicp_voxel_resolution", 0.3);
+  keyframe_thr_        = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
+  lc_config.num_submap_keyframes_ = declare_parameter<int>("keyframe.nusubmap_keyframes", 5);
+  lc_config.enable_submap_matching_ =
+      declare_parameter<bool>("keyframe.enable_submap_matching", false);
+  lc_config.loop_detection_radius_ = declare_parameter<double>("loop.loop_detection_radius", 15.0);
+  lc_config.loop_detection_timediff_threshold_ =
+      declare_parameter<double>("loop.loop_detection_timediff_threshold", 10.0);
 
-  this->declare_parameter<bool>("result.save_map_bag", false);
-  this->declare_parameter<bool>("result.save_map_pcd", false);
-  this->declare_parameter<bool>("result.save_in_kitti_format", false);
-  this->declare_parameter<std::string>("result.seq_name", "");
+  gc.max_corr_dist_ = lc_config.loop_detection_radius_ * 1.5;
 
-  auto node_base_interface    = this->get_node_base_interface();
-  auto node_clock_interface   = this->get_node_clock_interface();
-  auto node_logging_interface = this->get_node_logging_interface();
+  gc.num_threads_               = declare_parameter<int>("local_reg.num_threads", 4);
+  gc.correspondence_randomness_ = declare_parameter<int>("local_reg.correspondences_number", 15);
+  gc.max_num_iter_              = declare_parameter<int>("local_reg.max_iter", 32);
+  gc.icp_score_thr_             = declare_parameter<double>("local_reg.icp_score_threshold", 1.5);
 
-  rclcpp::QoS qos(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default));
-  qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
-  qos.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+  declare_parameter<bool>("global_reg.enable", false);
+  declare_parameter<bool>("global_reg.optimize_matching", true);
+  declare_parameter<double>("global_reg.distance_threshold", 30.0);
+  declare_parameter<int>("global_reg.max_nucorrespondences", 200);
+
+  save_map_bag_         = declare_parameter<bool>("result.save_map_bag", false);
+  save_map_pcd_         = declare_parameter<bool>("result.save_map_pcd", false);
+  save_in_kitti_format_ = declare_parameter<bool>("result.save_in_kitti_format", false);
+  seq_name_             = declare_parameter<std::string>("result.seq_name", "");
+
+  // auto node_base_interface    = get_node_base_interface();
+  // auto node_clock_interface   = get_node_clock_interface();
+  // auto node_logging_interface = get_node_logging_interface();
+
+  // rclcpp::QoS qos(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default));
+  // qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+  // qos.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
+
+  // Just copied it from GenZ-ICP
+  rclcpp::QoS qos((rclcpp::SystemDefaultsQoS().keep_last(1).durability_volatile()));
 
   // TODO(hlim): Revive Broadccaster
-  // TransformBroadcaster 생성
   // tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(
   //   node_base_interface,
   //   node_clock_interface,
   //   node_logging_interface->get_logger(),
   //   qos
   // );
-
-  double loop_pub_hz, loop_update_hz, vis_hz;
-  LoopClosureConfig lc_config;
-  auto &gc = lc_config.gicp_config_;
-  auto &mc = lc_config.matcher_config_;
-
-  this->get_parameter("basic.map_frame", map_frame_);
-  this->get_parameter("basic.loop_pub_hz", loop_pub_hz);
-  this->get_parameter("basic.loop_update_hz", loop_update_hz);
-  this->get_parameter("basic.loop_pub_delayed_time", loop_pub_delayed_time_);
-  this->get_parameter("basic.vis_hz", vis_hz);
-  this->get_parameter("save_voxel_resolution", voxel_res_);
-  this->get_parameter("quatro_nano_gicp_voxel_resolution", lc_config.voxel_res_);
-  this->get_parameter("keyframe.keyframe_threshold", keyframe_thr_);
-  this->get_parameter("keyframe.nusubmap_keyframes", lc_config.num_submap_keyframes_);
-  this->get_parameter("keyframe.enable_submap_matching", lc_config.enable_submap_matching_);
-  this->get_parameter("loop.loop_detection_radius", lc_config.loop_detection_radius_);
-  this->get_parameter("loop.loop_detection_timediff_threshold",
-                      lc_config.loop_detection_timediff_threshold_);
-  this->get_parameter("loop.use_global_reg", lc_config.enable_quatro_);
-
-  gc.max_corr_dist_ = lc_config.loop_detection_radius_ * 1.5;
-
-  this->get_parameter("local_reg.num_threads", gc.num_threads_);
-  this->get_parameter("local_reg.correspondence_randomness", gc.correspondence_randomness_);
-  this->get_parameter("local_reg.max_num_iter", gc.max_num_iter_);
-  this->get_parameter("local_reg.icp_score_threshold", gc.icp_score_thr_);
-
-  this->get_parameter("result.save_map_bag", save_map_bag_);
-  this->get_parameter("result.save_map_pcd", save_map_pcd_);
-  this->get_parameter("result.save_in_kitti_format", save_in_kitti_format_);
-  this->get_parameter("result.seq_name", seq_name_);
 
   package_path_ = "";
 
