@@ -16,27 +16,25 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   loop_pub_delayed_time_ = declare_parameter<double>("loop_pub_delayed_time", 60.0);
   vis_hz                 = declare_parameter<double>("vis_hz", 0.5);
 
-  voxel_res_           = declare_parameter<double>("save_voxel_resolution", 0.3);
-  lc_config.voxel_res_ = declare_parameter<double>("quatro_nano_gicp_voxel_resolution", 0.3);
-  keyframe_thr_        = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
+  lc_config.voxel_res_            = declare_parameter<double>("voxel_resolution", 0.3);
+  voxel_res_                      = declare_parameter<double>("save_voxel_resolution", 0.3);
+  keyframe_thr_                   = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
   lc_config.num_submap_keyframes_ = declare_parameter<int>("keyframe.num_submap_keyframes", 5);
   lc_config.enable_submap_matching_ =
       declare_parameter<bool>("keyframe.enable_submap_matching", false);
+  lc_config.verbose_               = declare_parameter<bool>("loop.verbose", false);
   lc_config.loop_detection_radius_ = declare_parameter<double>("loop.loop_detection_radius", 15.0);
   lc_config.loop_detection_timediff_threshold_ =
       declare_parameter<double>("loop.loop_detection_timediff_threshold", 10.0);
 
-  gc.max_corr_dist_ = lc_config.loop_detection_radius_ * 1.5;
-
   gc.num_threads_               = declare_parameter<int>("local_reg.num_threads", 8);
   gc.correspondence_randomness_ = declare_parameter<int>("local_reg.correspondences_number", 20);
-  gc.max_num_iter_              = declare_parameter<int>("local_reg.max_iter", 32);
-  gc.icp_score_thr_             = declare_parameter<double>("local_reg.icp_score_threshold", 1.5);
+  gc.max_num_iter_              = declare_parameter<int>("local_reg.max_num_iter", 32);
+  gc.scale_factor_for_corr_dist_ =
+      declare_parameter<double>("local_reg.scale_factor_for_corr_dist", 5.0);
+  gc.overlap_threshold_ = declare_parameter<double>("local_reg.overlap_threshold", 90.0);
 
-  declare_parameter<bool>("global_reg.enable", false);
-  declare_parameter<bool>("global_reg.optimize_matching", true);
-  declare_parameter<double>("global_reg.distance_threshold", 30.0);
-  declare_parameter<int>("global_reg.max_nucorrespondences", 200);
+  lc_config.enable_global_registration_ = declare_parameter<bool>("global_reg.enable", false);
 
   save_map_bag_         = declare_parameter<bool>("result.save_map_bag", false);
   save_map_pcd_         = declare_parameter<bool>("result.save_map_pcd", false);
@@ -113,6 +111,8 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
                                     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg) {
   Eigen::Matrix4d last_odom_tf = current_frame_.pose_;
   current_frame_               = PoseGraphNode(*odom_msg, *pcd_msg, current_keyframe_idx_);
+
+  RCLCPP_INFO(this->get_logger(), "%d th node comes.", current_keyframe_idx_);
 
   auto t1 = high_resolution_clock::now();
 
@@ -275,14 +275,13 @@ void PoseGraphManager::loopTimerFunc() {
       loop_closure_->performLoopClosure(keyframes_.back(), keyframes_, closest_keyframe_idx);
 
   if (reg_output.is_valid_) {
-    RCLCPP_INFO(this->get_logger(), "Loop closure accepted. Score: %.3f", reg_output.score_);
-    const auto &score = reg_output.score_;
+    RCLCPP_INFO(this->get_logger(), "LC accepted. Overlapness: %.3f", reg_output.overlapness_);
     gtsam::Pose3 pose_from =
         poseEigToGtsamPose(reg_output.pose_ * keyframes_.back().pose_corrected_);
     gtsam::Pose3 pose_to = poseEigToGtsamPose(keyframes_[closest_keyframe_idx].pose_corrected_);
 
-    auto variance_vector =
-        (gtsam::Vector(6) << score, score, score, score, score, score).finished();
+    // TODO(hlim): Parameterize
+    auto variance_vector = (gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.01, 0.01, 0.01).finished();
     gtsam::noiseModel::Diagonal::shared_ptr loop_noise =
         gtsam::noiseModel::Diagonal::Variances(variance_vector);
 
@@ -317,7 +316,7 @@ void PoseGraphManager::loopTimerFunc() {
     // --------------------------------------------------
 
   } else {
-    RCLCPP_WARN(this->get_logger(), "Loop closure rejected. Score: %.3f", reg_output.score_);
+    RCLCPP_WARN(this->get_logger(), "LC rejected. Overlapness: %.3f", reg_output.overlapness_);
   }
 
   auto t2 = high_resolution_clock::now();

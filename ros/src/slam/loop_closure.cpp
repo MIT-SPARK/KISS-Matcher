@@ -3,8 +3,12 @@
 using namespace kiss_matcher;
 
 LoopClosure::LoopClosure(const LoopClosureConfig &config) {
-  config_        = config;
-  const auto &gc = config_.gicp_config_;
+  config_                 = config;
+  config_.matcher_config_ = kiss_matcher::KISSMatcherConfig(config_.voxel_res_, false);
+
+  auto &gc          = config_.gicp_config_;
+  gc.max_corr_dist_ = config_.voxel_res_ * gc.scale_factor_for_corr_dist_;
+
   src_cloud_.reset(new pcl::PointCloud<PointType>);
   tgt_cloud_.reset(new pcl::PointCloud<PointType>);
 
@@ -97,9 +101,19 @@ RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
   local_reg_handler_->align(*aligned);
 
   const auto &local_reg_result = local_reg_handler_->getRegistrationResult();
-  // if matchness score is lower than threshold, (lower is better)
-  if (local_reg_result.error < config_.gicp_config_.icp_score_thr_) {
-    reg_output.is_valid_     = true;
+  if (config_.verbose_) {
+    std::cout << "Error score: " << local_reg_result.error << std::endl;
+  }
+
+  double overlapness =
+      static_cast<double>(local_reg_result.num_inliers) / src_cloud->size() * 100.0;
+
+  std::cout << "Overlap %: " << overlapness << " %" << std::endl;
+
+  reg_output.overlapness_ = overlapness;
+  // if matchness score is lower than threshold, (thw lower, the more likely to be overlapped)
+  if (overlapness < config_.gicp_config_.overlap_threshold_) {
+    reg_output.is_valid_     = false;
     reg_output.is_converged_ = true;
     reg_output.pose_ = local_reg_handler_->getFinalTransformation().inverse().cast<double>();
   }
@@ -150,13 +164,13 @@ RegOutput LoopClosure::performLoopClosure(const PoseGraphNode &query_keyframe,
                                                            closest_keyframe_idx_,
                                                            config_.num_submap_keyframes_,
                                                            config_.voxel_res_,
-                                                           config_.enable_quatro_,
+                                                           config_.enable_global_registration_,
                                                            config_.enable_submap_matching_);
     // Only for visualization
     *src_cloud_ = src_cloud;
     *tgt_cloud_ = tgt_cloud;
 
-    if (config_.enable_quatro_) {
+    if (config_.enable_global_registration_) {
       std::cout << "\033[1;35mExecute coarse-to-fine alignment: " << src_cloud.size() << " vs "
                 << tgt_cloud.size() << "\033[0m\n";
       return coarseToFineAlignment(src_cloud, tgt_cloud);

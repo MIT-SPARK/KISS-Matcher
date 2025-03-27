@@ -28,16 +28,18 @@ struct GICPConfig {
   int num_threads_               = 4;
   int correspondence_randomness_ = 20;
   int max_num_iter_              = 20;
-  double max_corr_dist_          = 1.0;
-  double icp_score_thr_          = 0.5;
+
+  double max_corr_dist_              = 1.0;
+  double scale_factor_for_corr_dist_ = 5.0;
+  double overlap_threshold_          = 90.0;
 };
 
 struct LoopClosureConfig {
-  bool verbose_                = false;
-  bool enable_quatro_          = true;
-  bool enable_submap_matching_ = true;
-  int num_submap_keyframes_    = 10;
-  double voxel_res_            = 0.1;
+  bool verbose_                    = false;
+  bool enable_global_registration_ = true;
+  bool enable_submap_matching_     = true;
+  int num_submap_keyframes_        = 10;
+  double voxel_res_                = 0.1;
   double loop_detection_radius_;
   double loop_detection_timediff_threshold_;
   GICPConfig gicp_config_;
@@ -49,6 +51,7 @@ struct RegOutput {
   bool is_valid_        = false;
   bool is_converged_    = false;
   double score_         = std::numeric_limits<double>::max();
+  double overlapness_   = 0.0;
   Eigen::Matrix4d pose_ = Eigen::Matrix4d::Identity();
 };
 

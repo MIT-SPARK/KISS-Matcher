@@ -13,23 +13,22 @@ kiss_matcher_sam:
       enable_submap_matching: true
 
     loop:
-      loop_detection_radius: 20.0
+      verbose: true
+      loop_detection_radius: 10.0
       loop_detection_timediff_threshold: 90.0
 
-    quatro_nano_gicp_voxel_resolution: 0.3
+    voxel_resolution: 0.3
     save_voxel_resolution: 0.3
 
     local_reg:
       num_threads: 8
       correspondences_number: 20
-      max_iter: 32
-      icp_score_threshold: 2.0
+      max_num_iter: 32
+      scale_factor_for_corr_dist: 5.0
+      overlap_threshold: 90.0 # Unit: %. The higher, the more conservative the decision becomes
 
     global_reg:
       enable: true
-      optimize_matching: true
-      distance_threshold: 35.0
-      max_nucorrespondences: 500
 
     result:
       save_map_pcd: true
