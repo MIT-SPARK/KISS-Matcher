@@ -7,6 +7,9 @@ Panels:
         - /Global Options1
         - /kiss_matcher_sam1
         - /kiss_matcher_sam1/Loop closure1
+        - /kiss_matcher_sam1/Loop closure1/Source1
+        - /kiss_matcher_sam1/Loop closure1/Target1
+        - /kiss_matcher_sam1/Loop closure1/Fine alignment1
         - /kiss_matcher_sam1/Loop closure1/coarse alignment1
         - /corrected_current_pcd1
         - /Corrected map1
@@ -46,27 +49,27 @@ Visualization Manager:
             - Alpha: 1
               Autocompute Intensity Bounds: true
               Autocompute Value Bounds:
-                Max Value: 10
-                Min Value: -10
+                Max Value: 33.8192138671875
+                Min Value: -5.456089973449707
                 Value: true
               Axis: Z
               Channel Name: intensity
               Class: rviz_default_plugins/PointCloud2
-              Color: 255; 255; 255
-              Color Transformer: Intensity
+              Color: 255; 0; 0
+              Color Transformer: FlatColor
               Decay Time: 0
               Enabled: true
               Invert Rainbow: false
               Max Color: 255; 255; 255
-              Max Intensity: 930
+              Max Intensity: 423.3333435058594
               Min Color: 0; 0; 0
               Min Intensity: 1
               Name: Source
               Position Transformer: XYZ
               Selectable: true
               Size (Pixels): 3
-              Size (m): 0.009999999776482582
-              Style: Flat Squares
+              Size (m): 0.20000000298023224
+              Style: Points
               Topic:
                 Depth: 5
                 Durability Policy: Volatile
@@ -85,21 +88,21 @@ Visualization Manager:
               Axis: Z
               Channel Name: intensity
               Class: rviz_default_plugins/PointCloud2
-              Color: 255; 255; 255
-              Color Transformer: Intensity
+              Color: 0; 255; 0
+              Color Transformer: FlatColor
               Decay Time: 0
               Enabled: true
               Invert Rainbow: false
               Max Color: 255; 255; 255
-              Max Intensity: 1277
+              Max Intensity: 1304
               Min Color: 0; 0; 0
               Min Intensity: 1
               Name: Target
               Position Transformer: XYZ
               Selectable: true
               Size (Pixels): 3
-              Size (m): 0.009999999776482582
-              Style: Flat Squares
+              Size (m): 0.20000000298023224
+              Style: Points
               Topic:
                 Depth: 5
                 Durability Policy: Volatile
@@ -118,8 +121,8 @@ Visualization Manager:
               Axis: Z
               Channel Name: intensity
               Class: rviz_default_plugins/PointCloud2
-              Color: 255; 255; 255
-              Color Transformer: Intensity
+              Color: 0; 0; 255
+              Color Transformer: FlatColor
               Decay Time: 0
               Enabled: true
               Invert Rainbow: false
@@ -130,9 +133,9 @@ Visualization Manager:
               Name: Fine alignment
               Position Transformer: XYZ
               Selectable: true
-              Size (Pixels): 3
+              Size (Pixels): 4
               Size (m): 0.009999999776482582
-              Style: Flat Squares
+              Style: Points
               Topic:
                 Depth: 5
                 Durability Policy: Volatile
@@ -151,13 +154,13 @@ Visualization Manager:
               Axis: Z
               Channel Name: intensity
               Class: rviz_default_plugins/PointCloud2
-              Color: 255; 255; 255
-              Color Transformer: Intensity
+              Color: 255; 200; 255
+              Color Transformer: FlatColor
               Decay Time: 0
               Enabled: true
               Invert Rainbow: false
               Max Color: 255; 255; 255
-              Max Intensity: 930
+              Max Intensity: 423.3333435058594
               Min Color: 0; 0; 0
               Min Intensity: 1
               Name: coarse alignment
@@ -165,7 +168,7 @@ Visualization Manager:
               Selectable: true
               Size (Pixels): 3
               Size (m): 0.009999999776482582
-              Style: Flat Squares
+              Style: Points
               Topic:
                 Depth: 5
                 Durability Policy: Volatile
@@ -182,26 +185,26 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
+        Max Value: 36.47406768798828
+        Min Value: -5.4443488121032715
         Value: true
       Axis: Z
       Channel Name: intensity
       Class: rviz_default_plugins/PointCloud2
       Color: 255; 255; 255
-      Color Transformer: Intensity
+      Color Transformer: AxisColor
       Decay Time: 0
       Enabled: true
       Invert Rainbow: false
       Max Color: 255; 255; 255
-      Max Intensity: 1376
+      Max Intensity: 2843
       Min Color: 0; 0; 0
       Min Intensity: 1
       Name: corrected_current_pcd
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
+      Size (m): 0.10000000149011612
       Style: Flat Squares
       Topic:
         Depth: 5
@@ -292,8 +295,8 @@ Visualization Manager:
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
-      Style: Flat Squares
+      Size (m): 0.10000000149011612
+      Style: Spheres
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -315,7 +318,7 @@ Visualization Manager:
       Color: 255; 255; 255
       Color Transformer: Intensity
       Decay Time: 0
-      Enabled: true
+      Enabled: false
       Invert Rainbow: false
       Max Color: 255; 255; 255
       Max Intensity: 4096
@@ -325,8 +328,8 @@ Visualization Manager:
       Position Transformer: XYZ
       Selectable: true
       Size (Pixels): 3
-      Size (m): 0.009999999776482582
-      Style: Flat Squares
+      Size (m): 0.5
+      Style: Spheres
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -335,7 +338,7 @@ Visualization Manager:
         Value: /km_sam/odom/original
       Use Fixed Frame: true
       Use rainbow: true
-      Value: true
+      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
@@ -438,25 +441,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 100
+      Distance: 108.60099029541016
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -18.203767776489258
-        Y: 25.772714614868164
-        Z: 3.6919360160827637
+        X: -0.9806039929389954
+        Y: 8.633706092834473
+        Z: -7.156944274902344
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.5897969007492065
+      Pitch: 0.9047968983650208
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 5.0673909187316895
+      Yaw: 4.602388381958008
     Saved: ~
 Window Geometry:
   Displays:

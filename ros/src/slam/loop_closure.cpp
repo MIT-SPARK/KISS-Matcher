@@ -105,16 +105,21 @@ RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
   double overlapness =
       static_cast<double>(local_reg_result.num_inliers) / src_cloud->size() * 100.0;
 
-  if (config_.verbose_) {
-    std::cout << "Overlapness: " << overlapness << " %" << std::endl;
-  }
-
   reg_output.overlapness_ = overlapness;
-  // if matchness score is lower than threshold, (thw lower, the more likely to be overlapped)
-  if (overlapness < config_.gicp_config_.overlap_threshold_) {
-    reg_output.is_valid_     = false;
+  // if matchness overlapness is over than threshold,
+  // that means the registration result is likely to be sufficiently overlapped
+  if (overlapness > config_.gicp_config_.overlap_threshold_) {
+    reg_output.is_valid_     = true;
     reg_output.is_converged_ = true;
     reg_output.pose_ = local_reg_handler_->getFinalTransformation().inverse().cast<double>();
+  }
+  if (config_.verbose_) {
+    if (overlapness > config_.gicp_config_.overlap_threshold_) {
+      std::cout << "\033[1;32m" << overlapness << "% > ";
+    } else {
+      std::cout << "\033[1;33m" << overlapness << "% < ";
+    }
+    std::cout << config_.gicp_config_.overlap_threshold_ << "%\033[1;0m\n";
   }
   return reg_output;
 }
