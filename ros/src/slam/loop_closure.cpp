@@ -101,14 +101,13 @@ RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
   local_reg_handler_->align(*aligned);
 
   const auto &local_reg_result = local_reg_handler_->getRegistrationResult();
-  if (config_.verbose_) {
-    std::cout << "Error score: " << local_reg_result.error << std::endl;
-  }
 
   double overlapness =
       static_cast<double>(local_reg_result.num_inliers) / src_cloud->size() * 100.0;
 
-  std::cout << "Overlap %: " << overlapness << " %" << std::endl;
+  if (config_.verbose_) {
+    std::cout << "Overlapness: " << overlapness << " %" << std::endl;
+  }
 
   reg_output.overlapness_ = overlapness;
   // if matchness score is lower than threshold, (thw lower, the more likely to be overlapped)
