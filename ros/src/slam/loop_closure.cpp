@@ -9,8 +9,8 @@ LoopClosure::LoopClosure(const LoopClosureConfig &config) {
   auto &gc          = config_.gicp_config_;
   gc.max_corr_dist_ = config_.voxel_res_ * gc.scale_factor_for_corr_dist_;
 
-  src_cloud_.reset(new pcl::PointCloud<PointType>);
-  tgt_cloud_.reset(new pcl::PointCloud<PointType>);
+  src_cloud_.reset(new pcl::PointCloud<PointType>());
+  tgt_cloud_.reset(new pcl::PointCloud<PointType>());
 
   global_reg_handler_ = std::make_shared<kiss_matcher::KISSMatcher>(config_.matcher_config_);
   local_reg_handler_  = std::make_shared<small_gicp::RegistrationPCL<PointType, PointType>>();

@@ -103,6 +103,7 @@ class PoseGraphManager : public rclcpp::Node {
 
   bool is_initialized_                        = false;
   bool loop_added_flag_                       = false;
+  bool loop_added_flag_map_                   = false;
   bool loop_added_flag_vis_                   = false;
   std::shared_ptr<gtsam::ISAM2> isam_handler_ = nullptr;
   gtsam::NonlinearFactorGraph gtsam_graph_;
@@ -120,7 +121,6 @@ class PoseGraphManager : public rclcpp::Node {
 
   pcl::PointCloud<pcl::PointXYZ> odoms_, corrected_odoms_;
   nav_msgs::msg::Path odom_path_, corrected_path_;
-  bool global_map_vis_switch_ = true;
 
   // results
   bool save_map_bag_ = false, save_map_pcd_ = false, save_in_kitti_format_ = false;
@@ -129,12 +129,14 @@ class PoseGraphManager : public rclcpp::Node {
   // Loop closure
   std::shared_ptr<kiss_matcher::LoopClosure> loop_closure_;
 
+  pcl::PointCloud<PointType>::Ptr map_cloud_;
+
   // ROS2 interface
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr corrected_path_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
 
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr corrected_current_pcd_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr corrected_pcd_map_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr scan_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_pub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr loop_detection_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr realtime_pose_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_src_pub_;

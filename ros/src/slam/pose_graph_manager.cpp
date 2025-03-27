@@ -63,10 +63,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   // I deliberately avoided adding a '/' in front of the topic names.
   path_pub_           = this->create_publisher<nav_msgs::msg::Path>("path/original", 10);
   corrected_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("path/corrected", 10);
-  corrected_pcd_map_pub_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("corrected_map", 10);
-  corrected_current_pcd_pub_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("corrected_current_pcd", 10);
+  map_pub_            = this->create_publisher<sensor_msgs::msg::PointCloud2>("global_map", 1);
+  scan_pub_           = this->create_publisher<sensor_msgs::msg::PointCloud2>("curr_scan", 10);
   loop_detection_pub_ =
       this->create_publisher<visualization_msgs::msg::Marker>("loop_detection", 10);
   // loop_closures_pub_ =
@@ -96,9 +94,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   //   std::chrono::duration<double>(1.0 / loop_pub_hz),
   //   std::bind(&PoseGraphManager::loopPubTimerFunc, this));
 
-  auto map_period_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0));  // 1s
-
-  map_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.5),
+  map_cloud_.reset(new pcl::PointCloud<PointType>());
+  map_timer_ = this->create_wall_timer(std::chrono::duration<double>(2.0),
                                        std::bind(&PoseGraphManager::buildMap, this));
 
   loop_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_update_hz),
@@ -143,7 +140,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
     tf_broadcaster_->sendTransform(transform_stamped);
   }
 
-  corrected_current_pcd_pub_->publish(
+  scan_pub_->publish(
       pclToPclRos(transformPcd(current_frame_.scan_, current_frame_.pose_corrected_), map_frame_));
 
   if (!is_initialized_) {
@@ -261,7 +258,34 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
 //   }
 // }
 
-void PoseGraphManager::buildMap() { return; }
+void PoseGraphManager::buildMap() {
+  static size_t start_idx = 0;
+
+  if (map_pub_->get_subscription_count() > 0) {
+    {
+      std::lock_guard<std::mutex> lock(keyframes_mutex_);
+      if (loop_added_flag_map_) {
+        map_cloud_->clear();
+        start_idx = 0;
+      }
+
+      if (keyframes_.empty()) return;
+
+      for (size_t i = start_idx; i < keyframes_.size(); ++i) {
+        *map_cloud_ += transformPcd(keyframes_[i].scan_, keyframes_[i].pose_corrected_);
+      }
+
+      start_idx = keyframes_.size();
+    }
+
+    const auto &voxelized_map = voxelize(map_cloud_, voxel_res_);
+    map_pub_->publish(pclToPclRos(*voxelized_map, map_frame_));
+  }
+
+  if (loop_added_flag_map_) {
+    loop_added_flag_map_ = false;
+  }
+}
 
 void PoseGraphManager::detectLoopClosure() {
   if (!is_initialized_ || keyframes_.empty() || keyframes_.back().processed_) {
@@ -297,8 +321,9 @@ void PoseGraphManager::detectLoopClosure() {
     }
 
     loop_idx_pairs_.push_back({keyframes_.back().idx_, closest_keyframe_idx});
-    loop_added_flag_vis_ = true;
     loop_added_flag_     = true;
+    loop_added_flag_map_ = true;
+    loop_added_flag_vis_ = true;
 
     // --------------------------------------------------
     // TODO(hlim): resurrect pose_graph_tools_msgs
@@ -372,23 +397,7 @@ void PoseGraphManager::publishVisualization() {
     path_pub_->publish(odom_path_);
     corrected_path_pub_->publish(corrected_path_);
   }
-  if (global_map_vis_switch_ && (corrected_pcd_map_pub_->get_subscription_count() > 0)) {
-    pcl::PointCloud<PointType>::Ptr corrected_map(new pcl::PointCloud<PointType>());
-    corrected_map->reserve(keyframes_[0].scan_.size() * keyframes_.size());
 
-    {
-      std::lock_guard<std::mutex> lock(keyframes_mutex_);
-      for (size_t i = 0; i < keyframes_.size(); ++i) {
-        *corrected_map += transformPcd(keyframes_[i].scan_, keyframes_[i].pose_corrected_);
-      }
-    }
-    const auto &voxelized_map = voxelize(corrected_map, voxel_res_);
-    corrected_pcd_map_pub_->publish(pclToPclRos(*voxelized_map, map_frame_));
-    global_map_vis_switch_ = false;
-  }
-  if (!global_map_vis_switch_ && (corrected_pcd_map_pub_->get_subscription_count() == 0)) {
-    global_map_vis_switch_ = true;
-  }
   auto tv2 = high_resolution_clock::now();
   RCLCPP_INFO(
       this->get_logger(), "vis: %.1fms", duration_cast<microseconds>(tv2 - tv1).count() / 1e3);
