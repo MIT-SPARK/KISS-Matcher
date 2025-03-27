@@ -47,7 +47,7 @@ NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyfra
                                         const int tgt_idx,
                                         const int submap_range,
                                         const double voxel_res,
-                                        const bool enable_quatro,
+                                        const bool enable_global_registration,
                                         const bool enable_submap_matching) {
   pcl::PointCloud<PointType> tgt_accum, src_accum;
   int num_approx = keyframes[src_idx].scan_.size() * 2 * submap_range;
@@ -66,7 +66,7 @@ NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyfra
     }
   } else {
     src_accum = transformPcd(keyframes[src_idx].scan_, keyframes[src_idx].pose_corrected_);
-    if (enable_quatro) {
+    if (enable_global_registration) {
       tgt_accum = transformPcd(keyframes[tgt_idx].scan_, keyframes[tgt_idx].pose_corrected_);
     } else {
       // For ICP matching,

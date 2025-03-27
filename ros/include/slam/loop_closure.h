@@ -74,7 +74,7 @@ class LoopClosure {
                              const int tgt_idx,
                              const int submap_range,
                              const double voxel_res,
-                             const bool enable_quatro,
+                             const bool enable_global_registration,
                              const bool enable_submap_matching);
   RegOutput icpAlignment(const pcl::PointCloud<PointType> &src,
                          const pcl::PointCloud<PointType> &tgt);
