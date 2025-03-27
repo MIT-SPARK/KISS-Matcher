@@ -33,6 +33,7 @@ struct GICPConfig {
 };
 
 struct LoopClosureConfig {
+  bool verbose_                = false;
   bool enable_quatro_          = true;
   bool enable_submap_matching_ = true;
   int num_submap_keyframes_    = 10;
