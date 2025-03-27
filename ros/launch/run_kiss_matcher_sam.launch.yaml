@@ -1,0 +1,38 @@
+---
+launch:
+  # In arg, all the default value should be string
+  - arg: {name: start_rviz,  default: "true"}
+  - arg: {name: namespace,  default: "km_sam", description: KISS-Matcher-SAM (KM-SAM)}
+
+  - arg: {name: rviz_path,  default: $(find-pkg-share kiss_matcher_ros)/rviz/kiss_matcher_sam.rviz}
+  - arg: {name: config_path,   default: $(find-pkg-share kiss_matcher_ros)/config/slam_config.yaml}
+
+
+  - arg: {name: odom_topic, default: "/odometry"}
+  - arg: {name: scan_topic, default: "/cloud_registered"}
+
+  - node:
+      namespace: $(var namespace)
+      pkg: kiss_matcher_ros
+      exec: kiss_matcher_sam
+      name: kiss_matcher_sam
+      output: screen
+      on_exit: shutdown
+
+      remap:
+        # Subscriber topics
+        - { from: '/cloud', to: $(var scan_topic) }
+        - { from: '/odom',   to: $(var odom_topic) }
+
+      param:
+        - from: $(var config_path)
+
+  - node:
+      if: $(var start_rviz)
+      pkg: rviz2
+      exec: rviz2
+      name: "km_sam_rviz"
+      launch-prefix: "nice"
+      output: "screen"
+      args: >
+        -d $(var rviz_path)
