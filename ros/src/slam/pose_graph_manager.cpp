@@ -61,9 +61,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
 
   // NOTE(hlim): To make this node compatible with being launched under different namespaces,
   // I deliberately avoided adding a '/' in front of the topic names.
-  odom_pub_           = this->create_publisher<sensor_msgs::msg::PointCloud2>("odom/original", 10);
   path_pub_           = this->create_publisher<nav_msgs::msg::Path>("path/original", 10);
-  corrected_odom_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("odom/corrected", 10);
   corrected_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("path/corrected", 10);
   corrected_pcd_map_pub_ =
       this->create_publisher<sensor_msgs::msg::PointCloud2>("corrected_map", 10);
@@ -361,11 +359,10 @@ void PoseGraphManager::visTimerFunc() {
     }
     loop_added_flag_vis_ = false;
   }
+
   {
     std::lock_guard<std::mutex> lock(vis_mutex_);
-    odom_pub_->publish(pclToPclRos(odoms_, map_frame_));
     path_pub_->publish(odom_path_);
-    corrected_odom_pub_->publish(pclToPclRos(corrected_odoms_, map_frame_));
     corrected_path_pub_->publish(corrected_path_);
   }
   if (global_map_vis_switch_ && (corrected_pcd_map_pub_->get_subscription_count() > 0)) {

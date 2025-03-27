@@ -15,8 +15,6 @@ Panels:
         - /Corrected map1
         - /Loop detection1
         - /Loop detection array1
-        - /Corrected node position1
-        - /Node position1
         - /Corrected traj1
         - /Raw traj1
       Splitter Ratio: 0.28558874130249023
@@ -38,7 +36,7 @@ Panels:
     Experimental: false
     Name: Time
     SyncMode: 0
-    SyncSource: Corrected node position
+    SyncSource: corrected_current_pcd
 Visualization Manager:
   Class: ""
   Displays:
@@ -185,8 +183,8 @@ Visualization Manager:
     - Alpha: 1
       Autocompute Intensity Bounds: true
       Autocompute Value Bounds:
-        Max Value: 36.47406768798828
-        Min Value: -5.4443488121032715
+        Max Value: 30.853002548217773
+        Min Value: -6.417863845825195
         Value: true
       Axis: Z
       Channel Name: intensity
@@ -252,7 +250,7 @@ Visualization Manager:
       Enabled: true
       Name: Loop detection
       Namespaces:
-        {}
+        "": true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -273,72 +271,6 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /km_sam/loop_detection_array
       Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
-      Enabled: true
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 4096
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: Corrected node position
-      Position Transformer: XYZ
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.10000000149011612
-      Style: Spheres
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /km_sam/odom/corrected
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: true
-    - Alpha: 1
-      Autocompute Intensity Bounds: true
-      Autocompute Value Bounds:
-        Max Value: 10
-        Min Value: -10
-        Value: true
-      Axis: Z
-      Channel Name: intensity
-      Class: rviz_default_plugins/PointCloud2
-      Color: 255; 255; 255
-      Color Transformer: Intensity
-      Decay Time: 0
-      Enabled: false
-      Invert Rainbow: false
-      Max Color: 255; 255; 255
-      Max Intensity: 4096
-      Min Color: 0; 0; 0
-      Min Intensity: 0
-      Name: Node position
-      Position Transformer: XYZ
-      Selectable: true
-      Size (Pixels): 3
-      Size (m): 0.5
-      Style: Spheres
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /km_sam/odom/original
-      Use Fixed Frame: true
-      Use rainbow: true
-      Value: false
     - Alpha: 1
       Buffer Length: 1
       Class: rviz_default_plugins/Path
@@ -441,25 +373,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 108.60099029541016
+      Distance: 66.52855682373047
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -0.9806039929389954
-        Y: 8.633706092834473
-        Z: -7.156944274902344
+        X: -7.56765604019165
+        Y: 5.429699897766113
+        Z: 2.184891700744629
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 0.9047968983650208
+      Pitch: 0.6997969746589661
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 4.602388381958008
+      Yaw: 4.317387580871582
     Saved: ~
 Window Geometry:
   Displays:
