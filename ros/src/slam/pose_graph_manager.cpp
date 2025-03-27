@@ -9,16 +9,17 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   auto &gc = lc_config.gicp_config_;
   auto &mc = lc_config.matcher_config_;
 
-  map_frame_             = declare_parameter<std::string>("basic.map_frame", "map");
-  loop_pub_hz            = declare_parameter<double>("basic.loop_pub_hz", 0.1);
-  loop_update_hz         = declare_parameter<double>("basic.loop_update_hz", 1.0);
-  loop_pub_delayed_time_ = declare_parameter<double>("basic.loop_pub_delayed_time", 60.0);
-  vis_hz                 = declare_parameter<double>("basic.vis_hz", 0.5);
+  map_frame_             = declare_parameter<std::string>("map_frame", "map");
+  base_frame_            = declare_parameter<std::string>("base_frame", "base");
+  loop_pub_hz            = declare_parameter<double>("loop_pub_hz", 0.1);
+  loop_update_hz         = declare_parameter<double>("loop_update_hz", 1.0);
+  loop_pub_delayed_time_ = declare_parameter<double>("loop_pub_delayed_time", 60.0);
+  vis_hz                 = declare_parameter<double>("vis_hz", 0.5);
 
   voxel_res_           = declare_parameter<double>("save_voxel_resolution", 0.3);
   lc_config.voxel_res_ = declare_parameter<double>("quatro_nano_gicp_voxel_resolution", 0.3);
   keyframe_thr_        = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
-  lc_config.num_submap_keyframes_ = declare_parameter<int>("keyframe.nusubmap_keyframes", 5);
+  lc_config.num_submap_keyframes_ = declare_parameter<int>("keyframe.num_submap_keyframes", 5);
   lc_config.enable_submap_matching_ =
       declare_parameter<bool>("keyframe.enable_submap_matching", false);
   lc_config.loop_detection_radius_ = declare_parameter<double>("loop.loop_detection_radius", 15.0);
@@ -27,8 +28,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
 
   gc.max_corr_dist_ = lc_config.loop_detection_radius_ * 1.5;
 
-  gc.num_threads_               = declare_parameter<int>("local_reg.num_threads", 4);
-  gc.correspondence_randomness_ = declare_parameter<int>("local_reg.correspondences_number", 15);
+  gc.num_threads_               = declare_parameter<int>("local_reg.num_threads", 8);
+  gc.correspondence_randomness_ = declare_parameter<int>("local_reg.correspondences_number", 20);
   gc.max_num_iter_              = declare_parameter<int>("local_reg.max_iter", 32);
   gc.icp_score_thr_             = declare_parameter<double>("local_reg.icp_score_threshold", 1.5);
 
@@ -42,24 +43,11 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   save_in_kitti_format_ = declare_parameter<bool>("result.save_in_kitti_format", false);
   seq_name_             = declare_parameter<std::string>("result.seq_name", "");
 
-  // auto node_base_interface    = get_node_base_interface();
-  // auto node_clock_interface   = get_node_clock_interface();
-  // auto node_logging_interface = get_node_logging_interface();
+  rclcpp::QoS qos(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default));
+  qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
+  qos.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
 
-  // rclcpp::QoS qos(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_default));
-  // qos.reliability(RMW_QOS_POLICY_RELIABILITY_RELIABLE);
-  // qos.durability(RMW_QOS_POLICY_DURABILITY_TRANSIENT_LOCAL);
-
-  // Just copied it from GenZ-ICP
-  rclcpp::QoS qos((rclcpp::SystemDefaultsQoS().keep_last(1).durability_volatile()));
-
-  // TODO(hlim): Revive Broadccaster
-  // tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(
-  //   node_base_interface,
-  //   node_clock_interface,
-  //   node_logging_interface->get_logger(),
-  //   qos
-  // );
+  tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 
   package_path_ = "";
 
@@ -73,40 +61,40 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   odom_path_.header.frame_id      = map_frame_;
   corrected_path_.header.frame_id = map_frame_;
 
-  odom_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("/ori_odom", 10);
-  path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/ori_path", 10);
-  corrected_odom_pub_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("/corrected_odom", 10);
-  corrected_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("/corrected_path", 10);
+  // NOTE(hlim): To make this node compatible with being launched under different namespaces,
+  // I deliberately avoided adding a '/' in front of the topic names.
+  odom_pub_           = this->create_publisher<sensor_msgs::msg::PointCloud2>("odom/original", 10);
+  path_pub_           = this->create_publisher<nav_msgs::msg::Path>("path/original", 10);
+  corrected_odom_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("odom/corrected", 10);
+  corrected_path_pub_ = this->create_publisher<nav_msgs::msg::Path>("path/corrected", 10);
   corrected_pcd_map_pub_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("/corrected_map", 10);
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("corrected_map", 10);
   corrected_current_pcd_pub_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("/corrected_current_pcd", 10);
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("corrected_current_pcd", 10);
   loop_detection_pub_ =
-      this->create_publisher<visualization_msgs::msg::Marker>("/loop_detection", 10);
+      this->create_publisher<visualization_msgs::msg::Marker>("loop_detection", 10);
   // loop_closures_pub_ =
   // this->create_publisher<pose_graph_tools_msgs::msg::PoseGraph>("/hydra_ros_node/external_loop_closures",
   // 10);
-  realtime_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("/pose_stamped", 10);
-  debug_src_pub_     = this->create_publisher<sensor_msgs::msg::PointCloud2>("/src", 10);
-  debug_dst_pub_     = this->create_publisher<sensor_msgs::msg::PointCloud2>("/dst", 10);
+  realtime_pose_pub_ = this->create_publisher<geometry_msgs::msg::PoseStamped>("pose_stamped", 10);
+  debug_src_pub_     = this->create_publisher<sensor_msgs::msg::PointCloud2>("lc/src", 10);
+  debug_tgt_pub_     = this->create_publisher<sensor_msgs::msg::PointCloud2>("lc/tgt", 10);
   debug_coarse_aligned_pub_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("/coarse_aligned_quatro", 10);
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("lc/coarse_alignment", 10);
   debug_fine_aligned_pub_ =
-      this->create_publisher<sensor_msgs::msg::PointCloud2>("/fine_aligned_nano_gicp", 10);
+      this->create_publisher<sensor_msgs::msg::PointCloud2>("lc/fine_alignment", 10);
 
-  sub_odom_ =
-      std::make_shared<message_filters::Subscriber<nav_msgs::msg::Odometry>>(this, "/Odometry");
-  sub_pcd_ = std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(
-      this, "/cloud_registered");
+  sub_odom_ = std::make_shared<message_filters::Subscriber<nav_msgs::msg::Odometry>>(this, "/odom");
+  sub_pcd_ =
+      std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(this, "/cloud");
 
   sub_odom_pcd_sync_ = std::make_shared<message_filters::Synchronizer<odom_pcd_sync_pol>>(
       odom_pcd_sync_pol(10), *sub_odom_, *sub_pcd_);
   sub_odom_pcd_sync_->registerCallback(std::bind(
-      &PoseGraphManager::odomPcdCallback, this, std::placeholders::_1, std::placeholders::_2));
+      &PoseGraphManager::callbackNode, this, std::placeholders::_1, std::placeholders::_2));
 
   sub_save_flag_ = this->create_subscription<std_msgs::msg::String>(
-      "/save_dir", 1, std::bind(&PoseGraphManager::saveFlagCallback, this, std::placeholders::_1));
+      "save_dir", 1, std::bind(&PoseGraphManager::saveFlagCallback, this, std::placeholders::_1));
 
   // loop_pub_timer_ = this->create_wall_timer(
   //   std::chrono::duration<double>(1.0 / loop_pub_hz),
@@ -121,9 +109,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   RCLCPP_INFO(this->get_logger(), "Main class, starting node...");
 }
 
-void PoseGraphManager::odomPcdCallback(
-    const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
-    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg) {
+void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
+                                    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg) {
   Eigen::Matrix4d last_odom_tf = current_frame_.pose_;
   current_frame_               = PoseGraphNode(*odom_msg, *pcd_msg, current_keyframe_idx_);
 
@@ -138,19 +125,19 @@ void PoseGraphManager::odomPcdCallback(
         poseEigToPoseStamped(current_frame_.pose_corrected_, map_frame_);
     realtime_pose_pub_->publish(ps);
 
-    // geometry_msgs::msg::TransformStamped transform_stamped;
-    // transform_stamped.header.stamp = this->now();
-    // transform_stamped.header.frame_id = map_frame_;
-    // transform_stamped.child_frame_id = "robot";
-    // Eigen::Quaterniond q(current_frame_.pose_corrected_.block<3,3>(0,0));
-    // transform_stamped.transform.translation.x = current_frame_.pose_corrected_(0, 3);
-    // transform_stamped.transform.translation.y = current_frame_.pose_corrected_(1, 3);
-    // transform_stamped.transform.translation.z = current_frame_.pose_corrected_(2, 3);
-    // transform_stamped.transform.rotation.x = q.x();
-    // transform_stamped.transform.rotation.y = q.y();
-    // transform_stamped.transform.rotation.z = q.z();
-    // transform_stamped.transform.rotation.w = q.w();
-    // tf_broadcaster_->sendTransform(transform_stamped);
+    geometry_msgs::msg::TransformStamped transform_stamped;
+    transform_stamped.header.stamp    = odom_msg->header.stamp;
+    transform_stamped.header.frame_id = map_frame_;
+    transform_stamped.child_frame_id = base_frame_.empty() ? pcd_msg->header.frame_id : base_frame_;
+    Eigen::Quaterniond q(current_frame_.pose_corrected_.block<3, 3>(0, 0));
+    transform_stamped.transform.translation.x = current_frame_.pose_corrected_(0, 3);
+    transform_stamped.transform.translation.y = current_frame_.pose_corrected_(1, 3);
+    transform_stamped.transform.translation.z = current_frame_.pose_corrected_(2, 3);
+    transform_stamped.transform.rotation.x    = q.x();
+    transform_stamped.transform.rotation.y    = q.y();
+    transform_stamped.transform.rotation.z    = q.z();
+    transform_stamped.transform.rotation.w    = q.w();
+    tf_broadcaster_->sendTransform(transform_stamped);
   }
 
   corrected_current_pcd_pub_->publish(
@@ -335,7 +322,7 @@ void PoseGraphManager::loopTimerFunc() {
 
   auto t2 = high_resolution_clock::now();
   debug_src_pub_->publish(pclToPclRos(loop_closure_->getSourceCloud(), map_frame_));
-  debug_dst_pub_->publish(pclToPclRos(loop_closure_->getTargetCloud(), map_frame_));
+  debug_tgt_pub_->publish(pclToPclRos(loop_closure_->getTargetCloud(), map_frame_));
   debug_fine_aligned_pub_->publish(pclToPclRos(loop_closure_->getFinalAlignedCloud(), map_frame_));
   debug_coarse_aligned_pub_->publish(
       pclToPclRos(loop_closure_->getCoarseAlignedCloud(), map_frame_));

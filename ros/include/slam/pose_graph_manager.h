@@ -77,8 +77,8 @@ class PoseGraphManager : public rclcpp::Node {
   visualization_msgs::msg::Marker getLoopMarkers(const gtsam::Values &corrected_esti_in);
 
   // callbacks
-  void odomPcdCallback(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
-                       const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg);
+  void callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
+                    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg);
   void saveFlagCallback(const std_msgs::msg::String::ConstSharedPtr &msg);
   // void loopPubTimerFunc();
   void loopTimerFunc();
@@ -86,6 +86,7 @@ class PoseGraphManager : public rclcpp::Node {
 
   // basic params
   std::string map_frame_;
+  std::string base_frame_;
   std::string package_path_;
   std::string seq_name_;
 
@@ -113,7 +114,8 @@ class PoseGraphManager : public rclcpp::Node {
   int sub_key_num_;
   std::vector<std::pair<size_t, size_t>> loop_idx_pairs_;
   // pose_graph_tools_msgs::msg::PoseGraph loop_msgs_;
-  // std::shared_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+
+  std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 
   pcl::PointCloud<pcl::PointXYZ> odoms_, corrected_odoms_;
   nav_msgs::msg::Path odom_path_, corrected_path_;
@@ -137,7 +139,7 @@ class PoseGraphManager : public rclcpp::Node {
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr loop_detection_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr realtime_pose_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_src_pub_;
-  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_dst_pub_;
+  rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_tgt_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_coarse_aligned_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_fine_aligned_pub_;
 
