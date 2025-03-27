@@ -41,6 +41,8 @@ repos:
     hooks:
       - id: flake8
         exclude: 'python/utils/download_datasets'
+        # To avoid conflict between flake and black
+        args: ["--ignore=E501"]
 
   ######################################################################
   # Markdown Formatting
