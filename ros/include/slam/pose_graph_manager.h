@@ -76,30 +76,31 @@ class PoseGraphManager : public rclcpp::Node {
                        const kiss_matcher::PoseGraphNode &latest_pose_pcd);
   visualization_msgs::msg::Marker getLoopMarkers(const gtsam::Values &corrected_esti_in);
 
-  // callbacks
   void callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
                     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg);
   void saveFlagCallback(const std_msgs::msg::String::ConstSharedPtr &msg);
+  /**** Timer functions ****/
   // void loopPubTimerFunc();
-  void loopTimerFunc();
-  void visTimerFunc();
+  void buildMap();
+  void detectLoopClosure();
+  void publishVisualization();
 
-  // basic params
   std::string map_frame_;
   std::string base_frame_;
   std::string package_path_;
   std::string seq_name_;
 
-  // shared data - odom and pcd
-  std::mutex realtime_pose_mutex_, keyframes_mutex_;
-  std::mutex graph_mutex_, vis_mutex_;
+  std::mutex realtime_pose_mutex_;
+  std::mutex keyframes_mutex_;
+  std::mutex graph_mutex_;
+  std::mutex vis_mutex_;
+
   Eigen::Matrix4d last_corrected_pose_ = Eigen::Matrix4d::Identity();
   Eigen::Matrix4d odom_delta_          = Eigen::Matrix4d::Identity();
   kiss_matcher::PoseGraphNode current_frame_;
   std::vector<kiss_matcher::PoseGraphNode> keyframes_;
   int current_keyframe_idx_ = 0;
 
-  // graph and values
   bool is_initialized_                        = false;
   bool loop_added_flag_                       = false;
   bool loop_added_flag_vis_                   = false;
@@ -132,8 +133,6 @@ class PoseGraphManager : public rclcpp::Node {
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr corrected_path_pub_;
   rclcpp::Publisher<nav_msgs::msg::Path>::SharedPtr path_pub_;
 
-  // rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr corrected_odom_pub_;
-  // rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr odom_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr corrected_current_pcd_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr corrected_pcd_map_pub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr loop_detection_pub_;
@@ -150,10 +149,11 @@ class PoseGraphManager : public rclcpp::Node {
   // message_filters
   std::shared_ptr<message_filters::Subscriber<nav_msgs::msg::Odometry>> sub_odom_;
   std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>> sub_pcd_;
-  std::shared_ptr<message_filters::Synchronizer<odom_pcd_sync_pol>> sub_odom_pcd_sync_;
+  std::shared_ptr<message_filters::Synchronizer<odom_pcd_sync_pol>> sub_node_;
 
   // timers
-  rclcpp::TimerBase::SharedPtr loop_pub_timer_;
+  rclcpp::TimerBase::SharedPtr hydra_loop_timer_;
+  rclcpp::TimerBase::SharedPtr map_timer_;
   rclcpp::TimerBase::SharedPtr loop_timer_;
   rclcpp::TimerBase::SharedPtr vis_timer_;
 };

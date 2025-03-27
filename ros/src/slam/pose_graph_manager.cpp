@@ -84,9 +84,9 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   sub_pcd_ =
       std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(this, "/cloud");
 
-  sub_odom_pcd_sync_ = std::make_shared<message_filters::Synchronizer<odom_pcd_sync_pol>>(
+  sub_node_ = std::make_shared<message_filters::Synchronizer<odom_pcd_sync_pol>>(
       odom_pcd_sync_pol(10), *sub_odom_, *sub_pcd_);
-  sub_odom_pcd_sync_->registerCallback(std::bind(
+  sub_node_->registerCallback(std::bind(
       &PoseGraphManager::callbackNode, this, std::placeholders::_1, std::placeholders::_2));
 
   sub_save_flag_ = this->create_subscription<std_msgs::msg::String>(
@@ -96,11 +96,16 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   //   std::chrono::duration<double>(1.0 / loop_pub_hz),
   //   std::bind(&PoseGraphManager::loopPubTimerFunc, this));
 
+  auto map_period_ms = std::chrono::milliseconds(static_cast<int64_t>(1000.0));  // 1s
+
+  map_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.5),
+                                       std::bind(&PoseGraphManager::buildMap, this));
+
   loop_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_update_hz),
-                                        std::bind(&PoseGraphManager::loopTimerFunc, this));
+                                        std::bind(&PoseGraphManager::detectLoopClosure, this));
 
   vis_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),
-                                       std::bind(&PoseGraphManager::visTimerFunc, this));
+                                       std::bind(&PoseGraphManager::publishVisualization, this));
 
   RCLCPP_INFO(this->get_logger(), "Main class, starting node...");
 }
@@ -256,7 +261,9 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
 //   }
 // }
 
-void PoseGraphManager::loopTimerFunc() {
+void PoseGraphManager::buildMap() { return; }
+
+void PoseGraphManager::detectLoopClosure() {
   if (!is_initialized_ || keyframes_.empty() || keyframes_.back().processed_) {
     return;
   }
@@ -327,7 +334,7 @@ void PoseGraphManager::loopTimerFunc() {
   RCLCPP_INFO(this->get_logger(), "loop: %.1f", duration_cast<microseconds>(t2 - t1).count() / 1e3);
 }
 
-void PoseGraphManager::visTimerFunc() {
+void PoseGraphManager::publishVisualization() {
   if (!is_initialized_) {
     return;
   }
