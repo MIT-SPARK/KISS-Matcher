@@ -5,6 +5,7 @@
     loop_pub_hz: 0.1
     loop_update_hz: 2.0
     loop_pub_delayed_time: 30.0
+    map_update_hz: 0.2
     vis_hz: 1.0
 
     keyframe:

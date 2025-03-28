@@ -4,7 +4,7 @@ using namespace kiss_matcher;
 
 PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
     : rclcpp::Node("km_sam", options) {
-  double loop_pub_hz, loop_update_hz, vis_hz;
+  double loop_pub_hz, loop_update_hz, map_update_hz, vis_hz;
   LoopClosureConfig lc_config;
   auto &gc = lc_config.gicp_config_;
   auto &mc = lc_config.matcher_config_;
@@ -14,6 +14,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   loop_pub_hz            = declare_parameter<double>("loop_pub_hz", 0.1);
   loop_update_hz         = declare_parameter<double>("loop_update_hz", 1.0);
   loop_pub_delayed_time_ = declare_parameter<double>("loop_pub_delayed_time", 60.0);
+  map_update_hz          = declare_parameter<double>("map_update_hz", 0.2);
   vis_hz                 = declare_parameter<double>("vis_hz", 0.5);
 
   lc_config.voxel_res_            = declare_parameter<double>("voxel_resolution", 0.3);
@@ -95,7 +96,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   //   std::bind(&PoseGraphManager::loopPubTimerFunc, this));
 
   map_cloud_.reset(new pcl::PointCloud<PointType>());
-  map_timer_ = this->create_wall_timer(std::chrono::duration<double>(2.0),
+  map_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / map_update_hz),
                                        std::bind(&PoseGraphManager::buildMap, this));
 
   loop_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_update_hz),
