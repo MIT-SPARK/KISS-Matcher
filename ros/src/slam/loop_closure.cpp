@@ -139,6 +139,10 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
   coarse_alignment.block<3, 3>(0, 0)    = solution.rotation.cast<double>();
   coarse_alignment.topRightCorner(3, 1) = solution.translation.cast<double>();
 
+  if (config_.verbose_) {
+    std::cout << "# of final inliers: " << global_reg_handler_->getNumFinalInliers() << "\n";
+  }
+
   if (!solution.valid) {
     return reg_output;
   } else {

@@ -315,7 +315,7 @@ void PoseGraphManager::detectLoopClosure() {
     gtsam::Pose3 pose_to = poseEigToGtsamPose(keyframes_[closest_keyframe_idx].pose_corrected_);
 
     // TODO(hlim): Parameterize
-    auto variance_vector = (gtsam::Vector(6) << 0.01, 0.01, 0.01, 0.01, 0.01, 0.01).finished();
+    auto variance_vector = (gtsam::Vector(6) << 1e-4, 1e-4, 1e-4, 1e-2, 1e-2, 1e-2).finished();
     gtsam::noiseModel::Diagonal::shared_ptr loop_noise =
         gtsam::noiseModel::Diagonal::Variances(variance_vector);
 

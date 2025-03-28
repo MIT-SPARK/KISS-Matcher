@@ -26,7 +26,7 @@
       correspondences_number: 20
       max_num_iter: 32
       scale_factor_for_corr_dist: 5.0
-      overlap_threshold: 75.0 # Unit: %. The higher, the more conservative the decision becomes
+      overlap_threshold: 60.0 # Unit: %. The higher, the more conservative the decision becomes
 
     global_reg:
       enable: true
