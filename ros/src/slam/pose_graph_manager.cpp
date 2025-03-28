@@ -50,7 +50,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
 
   package_path_ = "";
 
-  loop_closure_ = std::make_shared<LoopClosure>(lc_config);
+  loop_closure_          = std::make_shared<LoopClosure>(lc_config);
+  loop_detection_radius_ = lc_config.loop_detection_radius_;
 
   gtsam::ISAM2Params isam_params_;
   isam_params_.relinearizeThreshold = 0.01;
@@ -68,6 +69,9 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   scan_pub_           = this->create_publisher<sensor_msgs::msg::PointCloud2>("curr_scan", 10);
   loop_detection_pub_ =
       this->create_publisher<visualization_msgs::msg::Marker>("loop_detection", 10);
+  loop_detection_radius_pub_ =
+      this->create_publisher<visualization_msgs::msg::Marker>("loop_detection_radius", 10);
+
   // loop_closures_pub_ =
   // this->create_publisher<pose_graph_tools_msgs::msg::PoseGraph>("/hydra_ros_node/external_loop_closures",
   // 10);
@@ -383,7 +387,7 @@ void PoseGraphManager::publishVisualization() {
       corrected_path.poses.push_back(gtsamPoseToPoseStamped(pose_, map_frame_));
     }
     if (!loop_idx_pairs_.empty()) {
-      loop_detection_pub_->publish(getLoopMarkers(corrected_esti_copied));
+      loop_detection_pub_->publish(visualizeLoopMarkers(corrected_esti_copied));
     }
     {
       std::lock_guard<std::mutex> lock(vis_mutex_);
@@ -397,6 +401,8 @@ void PoseGraphManager::publishVisualization() {
     std::lock_guard<std::mutex> lock(vis_mutex_);
     path_pub_->publish(odom_path_);
     corrected_path_pub_->publish(corrected_path_);
+    loop_detection_radius_pub_->publish(
+        visualizeLoopDetectionRadius(corrected_path_.poses.back().pose.position));
   }
 
   auto tv2 = high_resolution_clock::now();
@@ -506,8 +512,8 @@ void PoseGraphManager::updateOdomsAndPaths(const PoseGraphNode &pose_pcd_in) {
   return;
 }
 
-visualization_msgs::msg::Marker PoseGraphManager::getLoopMarkers(
-    const gtsam::Values &corrected_esti_in) {
+visualization_msgs::msg::Marker PoseGraphManager::visualizeLoopMarkers(
+    const gtsam::Values &corrected_poses) const {
   visualization_msgs::msg::Marker edges;
   edges.type               = visualization_msgs::msg::Marker::LINE_LIST;
   edges.scale.x            = 0.12f;
@@ -519,12 +525,12 @@ visualization_msgs::msg::Marker PoseGraphManager::getLoopMarkers(
   edges.color.a            = 1.0f;
 
   for (size_t i = 0; i < loop_idx_pairs_.size(); ++i) {
-    if (loop_idx_pairs_[i].first >= corrected_esti_in.size() ||
-        loop_idx_pairs_[i].second >= corrected_esti_in.size()) {
+    if (loop_idx_pairs_[i].first >= corrected_poses.size() ||
+        loop_idx_pairs_[i].second >= corrected_poses.size()) {
       continue;
     }
-    gtsam::Pose3 pose  = corrected_esti_in.at<gtsam::Pose3>(loop_idx_pairs_[i].first);
-    gtsam::Pose3 pose2 = corrected_esti_in.at<gtsam::Pose3>(loop_idx_pairs_[i].second);
+    gtsam::Pose3 pose  = corrected_poses.at<gtsam::Pose3>(loop_idx_pairs_[i].first);
+    gtsam::Pose3 pose2 = corrected_poses.at<gtsam::Pose3>(loop_idx_pairs_[i].second);
 
     geometry_msgs::msg::Point p, p2;
     p.x  = pose.translation().x();
@@ -538,6 +544,26 @@ visualization_msgs::msg::Marker PoseGraphManager::getLoopMarkers(
     edges.points.push_back(p2);
   }
   return edges;
+}
+
+visualization_msgs::msg::Marker PoseGraphManager::visualizeLoopDetectionRadius(
+    const geometry_msgs::msg::Point &latest_position) const {
+  visualization_msgs::msg::Marker sphere;
+  sphere.header.frame_id = map_frame_;
+  sphere.id              = 100000;  // arbitrary number
+  sphere.type            = visualization_msgs::msg::Marker::SPHERE;
+  sphere.pose.position.x = latest_position.x;
+  sphere.pose.position.y = latest_position.y;
+  sphere.pose.position.z = latest_position.z;
+  sphere.scale.x         = 2 * loop_detection_radius_;
+  sphere.scale.y         = 2 * loop_detection_radius_;
+  sphere.scale.z         = 2 * loop_detection_radius_;
+  sphere.color.r         = 0.0;
+  sphere.color.g         = 0.824;
+  sphere.color.b         = 1.0;
+  sphere.color.a         = 0.5;
+
+  return sphere;
 }
 
 bool PoseGraphManager::checkIfKeyframe(const PoseGraphNode &pose_pcd_in,

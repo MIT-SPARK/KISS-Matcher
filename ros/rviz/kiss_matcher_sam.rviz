@@ -171,7 +171,7 @@ Visualization Manager:
               Use Fixed Frame: true
               Use rainbow: true
               Value: true
-          Enabled: false
+          Enabled: true
           Name: Loop closure
         - Alpha: 1
           Autocompute Intensity Bounds: true
@@ -206,7 +206,7 @@ Visualization Manager:
           Use Fixed Frame: true
           Use rainbow: true
           Value: true
-        - Alpha: 0.6000000238418579
+        - Alpha: 0.30000001192092896
           Autocompute Intensity Bounds: true
           Autocompute Value Bounds:
             Max Value: 26
@@ -243,7 +243,7 @@ Visualization Manager:
           Enabled: true
           Name: Loops
           Namespaces:
-            "": true
+            {}
           Topic:
             Depth: 5
             Durability Policy: Volatile
@@ -263,6 +263,19 @@ Visualization Manager:
             History Policy: Keep Last
             Reliability Policy: Reliable
             Value: /km_sam/loop_detection_array
+          Value: true
+        - Class: rviz_default_plugins/Marker
+          Enabled: true
+          Name: Loop closure radius
+          Namespaces:
+            "": true
+          Topic:
+            Depth: 5
+            Durability Policy: Volatile
+            Filter size: 10
+            History Policy: Keep Last
+            Reliability Policy: Reliable
+            Value: /km_sam/loop_detection_radius
           Value: true
         - Alpha: 1
           Buffer Length: 1
@@ -368,25 +381,25 @@ Visualization Manager:
   Views:
     Current:
       Class: rviz_default_plugins/Orbit
-      Distance: 80.99759674072266
+      Distance: 85.13282775878906
       Enable Stereo Rendering:
         Stereo Eye Separation: 0.05999999865889549
         Stereo Focal Distance: 1
         Swap Stereo Eyes: false
         Value: false
       Focal Point:
-        X: -12.635503768920898
-        Y: 19.550762176513672
-        Z: 15.450639724731445
+        X: 43.714027404785156
+        Y: 10.873809814453125
+        Z: 5.768928050994873
       Focal Shape Fixed Size: true
       Focal Shape Size: 0.05000000074505806
       Invert Z Axis: false
       Name: Current View
       Near Clip Distance: 0.009999999776482582
-      Pitch: 1.2247968912124634
+      Pitch: 0.8197968006134033
       Target Frame: <Fixed Frame>
       Value: Orbit (rviz_default_plugins)
-      Yaw: 4.447378158569336
+      Yaw: 4.367375373840332
     Saved: ~
 Window Geometry:
   Displays:

@@ -74,7 +74,9 @@ class PoseGraphManager : public rclcpp::Node {
   void updateOdomsAndPaths(const kiss_matcher::PoseGraphNode &pose_pcd_in);
   bool checkIfKeyframe(const kiss_matcher::PoseGraphNode &pose_pcd_in,
                        const kiss_matcher::PoseGraphNode &latest_pose_pcd);
-  visualization_msgs::msg::Marker getLoopMarkers(const gtsam::Values &corrected_esti_in);
+  visualization_msgs::msg::Marker visualizeLoopMarkers(const gtsam::Values &corrected_poses) const;
+  visualization_msgs::msg::Marker visualizeLoopDetectionRadius(
+      const geometry_msgs::msg::Point &latest_position) const;
 
   void callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
                     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg);
@@ -113,6 +115,7 @@ class PoseGraphManager : public rclcpp::Node {
   double keyframe_thr_;
   double voxel_res_;
   double loop_pub_delayed_time_;
+  double loop_detection_radius_;  // Only for visualization
   int sub_key_num_;
   std::vector<std::pair<size_t, size_t>> loop_idx_pairs_;
   // pose_graph_tools_msgs::msg::PoseGraph loop_msgs_;
@@ -138,6 +141,7 @@ class PoseGraphManager : public rclcpp::Node {
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr scan_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr map_pub_;
   rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr loop_detection_pub_;
+  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr loop_detection_radius_pub_;
   rclcpp::Publisher<geometry_msgs::msg::PoseStamped>::SharedPtr realtime_pose_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_src_pub_;
   rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr debug_tgt_pub_;
