@@ -64,8 +64,8 @@ class LoopClosure {
   int closest_keyframe_idx_ = -1;
   pcl::PointCloud<PointType>::Ptr src_cloud_;
   pcl::PointCloud<PointType>::Ptr tgt_cloud_;
-  pcl::PointCloud<PointType> coarse_aligned_;
-  pcl::PointCloud<PointType> aligned_;
+  pcl::PointCloud<PointType>::Ptr coarse_aligned_;
+  pcl::PointCloud<PointType>::Ptr aligned_;
   LoopClosureConfig config_;
 
  public:

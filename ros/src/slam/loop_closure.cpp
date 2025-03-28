@@ -11,6 +11,8 @@ LoopClosure::LoopClosure(const LoopClosureConfig &config) {
 
   src_cloud_.reset(new pcl::PointCloud<PointType>());
   tgt_cloud_.reset(new pcl::PointCloud<PointType>());
+  coarse_aligned_.reset(new pcl::PointCloud<PointType>());
+  aligned_.reset(new pcl::PointCloud<PointType>());
 
   global_reg_handler_ = std::make_shared<kiss_matcher::KISSMatcher>(config_.matcher_config_);
   local_reg_handler_  = std::make_shared<small_gicp::RegistrationPCL<PointType, PointType>>();
@@ -88,7 +90,7 @@ NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyfra
 RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
                                     const pcl::PointCloud<PointType> &tgt) {
   RegOutput reg_output;
-  aligned_.clear();
+  aligned_->clear();
   // merge subkeyframes before ICP
   pcl::PointCloud<PointType>::Ptr src_cloud(new pcl::PointCloud<PointType>());
   pcl::PointCloud<PointType>::Ptr tgt_cloud(new pcl::PointCloud<PointType>());
@@ -97,8 +99,7 @@ RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
   local_reg_handler_->setInputTarget(tgt_cloud);
   local_reg_handler_->setInputSource(src_cloud);
 
-  auto aligned = pcl::make_shared<pcl::PointCloud<PointType>>();
-  local_reg_handler_->align(*aligned);
+  local_reg_handler_->align(*aligned_);
 
   const auto &local_reg_result = local_reg_handler_->getRegistrationResult();
 
@@ -127,7 +128,7 @@ RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
 RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &src,
                                              const pcl::PointCloud<PointType> &tgt) {
   RegOutput reg_output;
-  coarse_aligned_.clear();
+  coarse_aligned_->clear();
 
   const auto &src_vec = convertCloudToVec(src);
   const auto &tgt_vec = convertCloudToVec(tgt);
@@ -142,8 +143,8 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
     return reg_output;
   } else {
     // coarse align with the result of Quatro
-    coarse_aligned_         = transformPcd(src, coarse_alignment);
-    const auto &fine_output = icpAlignment(coarse_aligned_, tgt);
+    *coarse_aligned_        = transformPcd(src, coarse_alignment);
+    const auto &fine_output = icpAlignment(*coarse_aligned_, tgt);
     const auto quatro_tf_   = reg_output.pose_;
     reg_output              = fine_output;
     reg_output.pose_        = fine_output.pose_ * quatro_tf_;
@@ -192,9 +193,9 @@ pcl::PointCloud<PointType> LoopClosure::getSourceCloud() { return *src_cloud_; }
 
 pcl::PointCloud<PointType> LoopClosure::getTargetCloud() { return *tgt_cloud_; }
 
-pcl::PointCloud<PointType> LoopClosure::getCoarseAlignedCloud() { return coarse_aligned_; }
+pcl::PointCloud<PointType> LoopClosure::getCoarseAlignedCloud() { return *coarse_aligned_; }
 
 // NOTE(hlim): To cover ICP-only mode, I just set `Final`, not `Fine`
-pcl::PointCloud<PointType> LoopClosure::getFinalAlignedCloud() { return aligned_; }
+pcl::PointCloud<PointType> LoopClosure::getFinalAlignedCloud() { return *aligned_; }
 
 int LoopClosure::getClosestKeyframeidx() { return closest_keyframe_idx_; }
