@@ -66,6 +66,7 @@ class LoopClosure {
   pcl::PointCloud<PointType>::Ptr tgt_cloud_;
   pcl::PointCloud<PointType>::Ptr coarse_aligned_;
   pcl::PointCloud<PointType>::Ptr aligned_;
+  pcl::PointCloud<PointType>::Ptr debug_cloud_;
   LoopClosureConfig config_;
 
  public:
@@ -93,6 +94,7 @@ class LoopClosure {
   pcl::PointCloud<PointType> getTargetCloud();
   pcl::PointCloud<PointType> getCoarseAlignedCloud();
   pcl::PointCloud<PointType> getFinalAlignedCloud();
+  pcl::PointCloud<PointType> getDebugCloud();
   int getClosestKeyframeidx();
 };
 }  // namespace kiss_matcher

@@ -82,6 +82,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
       this->create_publisher<sensor_msgs::msg::PointCloud2>("lc/coarse_alignment", 10);
   debug_fine_aligned_pub_ =
       this->create_publisher<sensor_msgs::msg::PointCloud2>("lc/fine_alignment", 10);
+  debug_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("lc/debug_cloud", 10);
 
   sub_odom_ = std::make_shared<message_filters::Subscriber<nav_msgs::msg::Odometry>>(this, "/odom");
   sub_pcd_ =
@@ -360,6 +361,7 @@ void PoseGraphManager::detectLoopClosure() {
   debug_fine_aligned_pub_->publish(pclToPclRos(loop_closure_->getFinalAlignedCloud(), map_frame_));
   debug_coarse_aligned_pub_->publish(
       pclToPclRos(loop_closure_->getCoarseAlignedCloud(), map_frame_));
+  debug_cloud_pub_->publish(pclToPclRos(loop_closure_->getDebugCloud(), map_frame_));
 
   RCLCPP_INFO(this->get_logger(), "loop: %.1f", duration_cast<microseconds>(t2 - t1).count() / 1e3);
 }

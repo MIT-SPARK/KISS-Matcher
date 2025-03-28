@@ -13,6 +13,7 @@ LoopClosure::LoopClosure(const LoopClosureConfig &config) {
   tgt_cloud_.reset(new pcl::PointCloud<PointType>());
   coarse_aligned_.reset(new pcl::PointCloud<PointType>());
   aligned_.reset(new pcl::PointCloud<PointType>());
+  debug_cloud_.reset(new pcl::PointCloud<PointType>());
 
   global_reg_handler_ = std::make_shared<kiss_matcher::KISSMatcher>(config_.matcher_config_);
   local_reg_handler_  = std::make_shared<small_gicp::RegistrationPCL<PointType, PointType>>();
@@ -105,14 +106,15 @@ RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
 
   double overlapness =
       static_cast<double>(local_reg_result.num_inliers) / src_cloud->size() * 100.0;
-
   reg_output.overlapness_ = overlapness;
+
+  // NOTE(hlim): fine_T_coarse
+  reg_output.pose_ = local_reg_handler_->getFinalTransformation().cast<double>();
   // if matchness overlapness is over than threshold,
   // that means the registration result is likely to be sufficiently overlapped
   if (overlapness > config_.gicp_config_.overlap_threshold_) {
     reg_output.is_valid_     = true;
     reg_output.is_converged_ = true;
-    reg_output.pose_ = local_reg_handler_->getFinalTransformation().inverse().cast<double>();
   }
   if (config_.verbose_) {
     if (overlapness > config_.gicp_config_.overlap_threshold_) {
@@ -149,9 +151,11 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
     // coarse align with the result of Quatro
     *coarse_aligned_        = transformPcd(src, coarse_alignment);
     const auto &fine_output = icpAlignment(*coarse_aligned_, tgt);
-    const auto quatro_tf_   = reg_output.pose_;
     reg_output              = fine_output;
-    reg_output.pose_        = fine_output.pose_ * quatro_tf_;
+    reg_output.pose_        = fine_output.pose_ * coarse_alignment;
+
+    // Use this cloud to debug whether the transformation is correct.
+    // *debug_cloud_        = transformPcd(src, reg_output.pose_);
   }
   return reg_output;
 }
@@ -201,5 +205,7 @@ pcl::PointCloud<PointType> LoopClosure::getCoarseAlignedCloud() { return *coarse
 
 // NOTE(hlim): To cover ICP-only mode, I just set `Final`, not `Fine`
 pcl::PointCloud<PointType> LoopClosure::getFinalAlignedCloud() { return *aligned_; }
+
+pcl::PointCloud<PointType> LoopClosure::getDebugCloud() { return *debug_cloud_; }
 
 int LoopClosure::getClosestKeyframeidx() { return closest_keyframe_idx_; }
