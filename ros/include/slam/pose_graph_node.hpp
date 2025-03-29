@@ -15,14 +15,14 @@ struct PoseGraphNode {
   Eigen::Matrix4d pose_           = Eigen::Matrix4d::Identity();
   Eigen::Matrix4d pose_corrected_ = Eigen::Matrix4d::Identity();
   double timestamp_;
-  int idx_;
+  size_t idx_;
   bool nnsearch_processed_      = false;
   bool loop_detector_processed_ = false;
 
   PoseGraphNode() {}
   inline PoseGraphNode(const nav_msgs::msg::Odometry &odom,
                        const sensor_msgs::msg::PointCloud2 &scan,
-                       const int &idx,
+                       const size_t idx,
                        const bool is_wrt_lidar_frame = false) {
     tf2::Quaternion q;
     q.setX(odom.pose.pose.orientation.x);
