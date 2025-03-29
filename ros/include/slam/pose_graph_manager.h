@@ -85,7 +85,7 @@ class PoseGraphManager : public rclcpp::Node {
   /**** Timer functions ****/
   // void loopPubTimerFunc();
   void buildMap();
-  void detectLoopClosure();
+  void detectLoopClosureByNNSearch();
   void publishVisualization();
 
   std::string map_frame_;

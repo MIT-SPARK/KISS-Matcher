@@ -109,8 +109,9 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   map_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / map_update_hz),
                                        std::bind(&PoseGraphManager::buildMap, this));
 
-  loop_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_update_hz),
-                                        std::bind(&PoseGraphManager::detectLoopClosure, this));
+  loop_timer_ =
+      this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_update_hz),
+                              std::bind(&PoseGraphManager::detectLoopClosureByNNSearch, this));
 
   vis_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),
                                        std::bind(&PoseGraphManager::publishVisualization, this));
@@ -302,11 +303,11 @@ void PoseGraphManager::buildMap() {
   }
 }
 
-void PoseGraphManager::detectLoopClosure() {
-  if (!is_initialized_ || keyframes_.empty() || keyframes_.back().processed_) {
+void PoseGraphManager::detectLoopClosureByNNSearch() {
+  if (!is_initialized_ || keyframes_.empty() || keyframes_.back().nnsearch_processed_) {
     return;
   }
-  keyframes_.back().processed_ = true;
+  keyframes_.back().nnsearch_processed_ = true;
 
   auto t1 = high_resolution_clock::now();
   const int closest_keyframe_idx =
