@@ -323,15 +323,15 @@ void PoseGraphManager::buildMap() {
 }
 
 void PoseGraphManager::detectLoopClosureByLoopDetector() {
-  if (!is_initialized_ || keyframes_.empty() || keyframes_.back().loop_detector_processed_) {
+  auto &query = keyframes_.back();
+  if (!is_initialized_ || keyframes_.empty() || query.loop_detector_processed_) {
     return;
   }
-  keyframes_.back().loop_detector_processed_ = true;
+  query.loop_detector_processed_ = true;
 
-  auto t1 = high_resolution_clock::now();
-  const int closest_keyframe_idx =
-      loop_detector_->fetchLoopCandidateIdx(keyframes_.back(), keyframes_);
-  if (closest_keyframe_idx < 0) {
+  auto t1                    = high_resolution_clock::now();
+  const auto &loop_candidate = loop_detector_->fetchLoopCandidate(query, keyframes_);
+  if (!loop_candidate.found_) {
     return;
   }
 }
