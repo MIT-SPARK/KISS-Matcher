@@ -129,11 +129,11 @@ class PoseGraphManager : public rclcpp::Node {
   pcl::PointCloud<pcl::PointXYZ> odoms_, corrected_odoms_;
   nav_msgs::msg::Path odom_path_, corrected_path_;
 
-  // results
-  bool save_map_bag_ = false, save_map_pcd_ = false, save_in_kitti_format_ = false;
-  double last_lc_time_ = 0.0;
+  bool save_map_bag_         = false;
+  bool save_map_pcd_         = false;
+  bool save_in_kitti_format_ = false;
+  double last_lc_time_       = 0.0;
 
-  // Loop closure
   std::shared_ptr<kiss_matcher::LoopClosure> loop_closure_;
 
   // NOTE(hlim): We do not provide a loop detector implementation directly,
@@ -166,7 +166,7 @@ class PoseGraphManager : public rclcpp::Node {
   std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>> sub_scan_;
   std::shared_ptr<message_filters::Synchronizer<odom_pcd_sync_pol>> sub_node_;
 
-  // timers
+  // Timers
   rclcpp::TimerBase::SharedPtr hydra_loop_timer_;
   rclcpp::TimerBase::SharedPtr map_timer_;
   rclcpp::TimerBase::SharedPtr loop_detector_timer_;

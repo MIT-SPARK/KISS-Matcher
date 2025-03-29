@@ -108,7 +108,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   sub_save_flag_ = this->create_subscription<std_msgs::msg::String>(
       "save_dir", 1, std::bind(&PoseGraphManager::saveFlagCallback, this, std::placeholders::_1));
 
-  // loop_pub_timer_ = this->create_wall_timer(
+  // hydra_loop_timer_ = this->create_wall_timer(
   //   std::chrono::duration<double>(1.0 / loop_pub_hz),
   //   std::bind(&PoseGraphManager::loopPubTimerFunc, this));
 
