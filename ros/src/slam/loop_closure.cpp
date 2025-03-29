@@ -193,7 +193,7 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
 
 RegOutput LoopClosure::performLoopClosure(const PoseGraphNode &query_keyframe,
                                           const std::vector<PoseGraphNode> &keyframes) {
-  const auto &loop_candidate = fetchClosestKeyframeIdx(query_keyframe, keyframes);
+  const auto &loop_candidate = fetchClosestCandidate(query_keyframe, keyframes);
   if (!loop_candidate.found_) {
     return RegOutput();
   }
