@@ -73,12 +73,7 @@ class PoseGraphManager : public rclcpp::Node {
   ~PoseGraphManager();
 
  private:
-  void updateOdomsAndPaths(const kiss_matcher::PoseGraphNode &pose_pcd_in);
-  bool checkIfKeyframe(const kiss_matcher::PoseGraphNode &pose_pcd_in,
-                       const kiss_matcher::PoseGraphNode &latest_pose_pcd);
-  visualization_msgs::msg::Marker visualizeLoopMarkers(const gtsam::Values &corrected_poses) const;
-  visualization_msgs::msg::Marker visualizeLoopDetectionRadius(
-      const geometry_msgs::msg::Point &latest_position) const;
+  void appendKeyframePose(const kiss_matcher::PoseGraphNode &node);
 
   void callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
                     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg);
@@ -88,7 +83,16 @@ class PoseGraphManager : public rclcpp::Node {
   void buildMap();
   void detectLoopClosureByLoopDetector();
   void detectLoopClosureByNNSearch();
+
+  void visualizeCurrentData();
   void visualizePoseGraph();
+
+  visualization_msgs::msg::Marker visualizeLoopMarkers(const gtsam::Values &corrected_poses) const;
+  visualization_msgs::msg::Marker visualizeLoopDetectionRadius(
+      const geometry_msgs::msg::Point &latest_position) const;
+
+  bool checkIfKeyframe(const kiss_matcher::PoseGraphNode &pose_pcd_in,
+                       const kiss_matcher::PoseGraphNode &latest_pose_pcd);
 
   std::string map_frame_;
   std::string base_frame_;

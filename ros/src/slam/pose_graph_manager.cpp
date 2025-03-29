@@ -175,7 +175,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
 
   if (!is_initialized_) {
     keyframes_.push_back(current_frame_);
-    updateOdomsAndPaths(current_frame_);
+    appendKeyframePose(current_frame_);
 
     auto variance_vector = (gtsam::Vector(6) << 1e-4, 1e-4, 1e-4, 1e-2, 1e-2, 1e-2).finished();
     gtsam::noiseModel::Diagonal::shared_ptr prior_noise =
@@ -217,7 +217,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
       current_keyframe_idx_++;
       {
         std::lock_guard<std::mutex> lock(vis_mutex_);
-        updateOdomsAndPaths(current_frame_);
+        appendKeyframePose(current_frame_);
       }
 
       local_timer.tic();
@@ -534,16 +534,14 @@ PoseGraphManager::~PoseGraphManager() {
   }
 }
 
-void PoseGraphManager::updateOdomsAndPaths(const PoseGraphNode &pose_pcd_in) {
-  odoms_.points.emplace_back(
-      pose_pcd_in.pose_(0, 3), pose_pcd_in.pose_(1, 3), pose_pcd_in.pose_(2, 3));
+void PoseGraphManager::appendKeyframePose(const PoseGraphNode &node) {
+  odoms_.points.emplace_back(node.pose_(0, 3), node.pose_(1, 3), node.pose_(2, 3));
 
-  corrected_odoms_.points.emplace_back(pose_pcd_in.pose_corrected_(0, 3),
-                                       pose_pcd_in.pose_corrected_(1, 3),
-                                       pose_pcd_in.pose_corrected_(2, 3));
+  corrected_odoms_.points.emplace_back(
+      node.pose_corrected_(0, 3), node.pose_corrected_(1, 3), node.pose_corrected_(2, 3));
 
-  odom_path_.poses.emplace_back(eigenToPoseStamped(pose_pcd_in.pose_, map_frame_));
-  corrected_path_.poses.emplace_back(eigenToPoseStamped(pose_pcd_in.pose_corrected_, map_frame_));
+  odom_path_.poses.emplace_back(eigenToPoseStamped(node.pose_, map_frame_));
+  corrected_path_.poses.emplace_back(eigenToPoseStamped(node.pose_corrected_, map_frame_));
   return;
 }
 
