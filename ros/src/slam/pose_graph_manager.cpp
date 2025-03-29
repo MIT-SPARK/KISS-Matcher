@@ -35,6 +35,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   gc.overlap_threshold_ = declare_parameter<double>("local_reg.overlap_threshold", 90.0);
 
   lc_config.enable_global_registration_ = declare_parameter<bool>("global_reg.enable", false);
+  lc_config.num_inliers_threshold_ =
+      declare_parameter<int>("global_reg.num_inliers_threshold", 100);
 
   save_map_bag_         = declare_parameter<bool>("result.save_map_bag", false);
   save_map_pcd_         = declare_parameter<bool>("result.save_map_pcd", false);
@@ -49,7 +51,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
 
   package_path_ = "";
 
-  loop_closure_          = std::make_shared<LoopClosure>(lc_config);
+  loop_closure_          = std::make_shared<LoopClosure>(lc_config, this->get_logger());
   loop_detection_radius_ = lc_config.loop_detection_radius_;
 
   gtsam::ISAM2Params isam_params_;

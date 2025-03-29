@@ -18,6 +18,7 @@
 #include <small_gicp/pcl/pcl_point_traits.hpp>
 #include <small_gicp/pcl/pcl_registration.hpp>
 
+#include "rclcpp/rclcpp.hpp"
 #include "slam/pose_graph_node.hpp"
 #include "slam/utils.hpp"
 
@@ -37,7 +38,8 @@ struct GICPConfig {
 struct LoopClosureConfig {
   bool verbose_                    = false;
   bool enable_global_registration_ = true;
-  int num_submap_keyframes_        = 10;
+  size_t num_submap_keyframes_     = 11;
+  size_t num_inliers_threshold_    = 100;
   double voxel_res_                = 0.1;
   double loop_detection_radius_;
   double loop_detection_timediff_threshold_;
@@ -68,8 +70,10 @@ class LoopClosure {
   pcl::PointCloud<PointType>::Ptr debug_cloud_;
   LoopClosureConfig config_;
 
+  rclcpp::Logger logger_;
+
  public:
-  explicit LoopClosure(const LoopClosureConfig &config);
+  explicit LoopClosure(const LoopClosureConfig &config, const rclcpp::Logger &logger);
   ~LoopClosure();
   int fetchClosestKeyframeIdx(const PoseGraphNode &query_keyframe,
                               const std::vector<PoseGraphNode> &keyframes);

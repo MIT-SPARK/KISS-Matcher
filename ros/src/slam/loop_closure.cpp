@@ -2,8 +2,8 @@
 
 using namespace kiss_matcher;
 
-LoopClosure::LoopClosure(const LoopClosureConfig &config) {
-  config_                 = config;
+LoopClosure::LoopClosure(const LoopClosureConfig &config, const rclcpp::Logger &logger)
+    : config_(config), logger_(logger) {
   config_.matcher_config_ = kiss_matcher::KISSMatcherConfig(config_.voxel_res_, false);
 
   auto &gc          = config_.gicp_config_;
@@ -122,11 +122,16 @@ RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
   }
   if (config_.verbose_) {
     if (overlapness > config_.gicp_config_.overlap_threshold_) {
-      std::cout << "\033[1;32m" << overlapness << "% > ";
+      RCLCPP_INFO(logger_,
+                  "Overlapness: \033[1;32m%.2f%% > %.2f%%\033[0m",
+                  overlapness,
+                  config_.gicp_config_.overlap_threshold_);
     } else {
-      std::cout << "\033[1;33m" << overlapness << "% < ";
+      RCLCPP_WARN(logger_,
+                  "Overlapness: %.2f%% < %.2f%%\033[0m",
+                  overlapness,
+                  config_.gicp_config_.overlap_threshold_);
     }
-    std::cout << config_.gicp_config_.overlap_threshold_ << "%\033[1;0m\n";
   }
   return reg_output;
 }
@@ -145,8 +150,21 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
   coarse_alignment.block<3, 3>(0, 0)    = solution.rotation.cast<double>();
   coarse_alignment.topRightCorner(3, 1) = solution.translation.cast<double>();
 
+  const size_t num_inliers = global_reg_handler_->getNumFinalInliers();
   if (config_.verbose_) {
-    std::cout << "# of final inliers: " << global_reg_handler_->getNumFinalInliers() << "\n";
+    if (num_inliers > config_.gicp_config_.overlap_threshold_) {
+      RCLCPP_INFO(logger_,
+                  "\033[1;32m# final inliers: %lu > %lu\033[0m",
+                  num_inliers,
+                  config_.num_inliers_threshold_);
+    } else {
+      RCLCPP_WARN(
+          logger_, "# final inliers: %lu < %lu", num_inliers, config_.num_inliers_threshold_);
+    }
+  }
+
+  if (config_.verbose_) {
+    RCLCPP_INFO(logger_, "# of final inliers: %lu", global_reg_handler_->getNumFinalInliers());
   }
 
   if (!solution.valid) {
@@ -186,12 +204,16 @@ RegOutput LoopClosure::performLoopClosure(const PoseGraphNode &query_keyframe,
     *tgt_cloud_ = tgt_cloud;
 
     if (config_.enable_global_registration_) {
-      std::cout << "\033[1;35mExecute coarse-to-fine alignment: " << src_cloud.size() << " vs "
-                << tgt_cloud.size() << "\033[0m\n";
+      RCLCPP_INFO(logger_,
+                  "\033[1;35mExecute coarse-to-fine alignment: # src = %lu, # tgt = %lu\033[0m",
+                  src_cloud.size(),
+                  tgt_cloud.size());
       return coarseToFineAlignment(src_cloud, tgt_cloud);
     } else {
-      std::cout << "\033[1;35mExecute GICP: " << src_cloud.size() << " vs " << tgt_cloud.size()
-                << "\033[0m\n";
+      RCLCPP_INFO(logger_,
+                  "\033[1;35mExecute GICP: # src = %lu, # tgt = %lu\033[0m",
+                  src_cloud.size(),
+                  tgt_cloud.size());
       return icpAlignment(src_cloud, tgt_cloud);
     }
   } else {
