@@ -342,9 +342,8 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
   }
   keyframes_.back().nnsearch_processed_ = true;
 
-  auto t1 = high_resolution_clock::now();
-  const auto &loop_candidate =
-      loop_closure_->fetchClosestKeyframeIdx(keyframes_.back(), keyframes_);
+  auto t1                    = high_resolution_clock::now();
+  const auto &loop_candidate = loop_closure_->fetchClosestCandidate(keyframes_.back(), keyframes_);
   if (!loop_candidate.found_) {
     return;
   }

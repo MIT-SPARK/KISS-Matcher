@@ -78,8 +78,8 @@ class LoopClosure {
   explicit LoopClosure(const LoopClosureConfig &config, const rclcpp::Logger &logger);
   ~LoopClosure();
   double calculateDistance(const Eigen::Matrix4d &pose1, const Eigen::Matrix4d &pose2);
-  LoopCandidate fetchClosestKeyframeIdx(const PoseGraphNode &query_frame,
-                                        const std::vector<PoseGraphNode> &keyframes);
+  LoopCandidate fetchClosestCandidate(const PoseGraphNode &query_frame,
+                                      const std::vector<PoseGraphNode> &keyframes);
   NodePair setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyframes,
                              const int src_idx,
                              const int tgt_idx,
