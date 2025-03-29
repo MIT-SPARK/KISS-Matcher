@@ -143,8 +143,6 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
   Eigen::Matrix4d last_odom_tf = current_frame_.pose_;
   current_frame_               = PoseGraphNode(*odom_msg, *pcd_msg, current_keyframe_idx_);
 
-  RCLCPP_INFO(this->get_logger(), "%d th node comes.", current_keyframe_idx_);
-
   kiss_matcher::TicToc total_timer;
   kiss_matcher::TicToc local_timer;
 
@@ -190,6 +188,8 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
     current_keyframe_idx_++;
     is_initialized_ = true;
 
+    RCLCPP_INFO(this->get_logger(), "The first node comes. Initialization complete.");
+
   } else {
     const auto t_keyframe_processing = local_timer.toc();
     if (checkIfKeyframe(current_frame_, keyframes_.back())) {
@@ -215,6 +215,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
       }
 
       current_keyframe_idx_++;
+      RCLCPP_INFO(this->get_logger(), "%d-th node comes.", current_keyframe_idx_);
       {
         std::lock_guard<std::mutex> lock(vis_mutex_);
         updateOdomsAndPaths(current_frame_);
