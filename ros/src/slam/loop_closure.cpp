@@ -54,7 +54,7 @@ LoopCandidate LoopClosure::fetchClosestCandidate(const PoseGraphNode &query_fram
       if (dist < candidate.distance_) {
         candidate.found_    = true;
         candidate.distance_ = dist;
-        candidate.idx_      = static_cast<size_t>(keyframes[idx].idx_);
+        candidate.idx_      = keyframes[idx].idx_;
       }
     }
   }

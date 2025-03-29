@@ -8,7 +8,7 @@
 
 struct LoopCandidate {
   bool found_      = false;
-  size_t idx_      = 0;
+  size_t idx_      = std::numeric_limits<size_t>::max();
   double distance_ = std::numeric_limits<double>::max();
 };
 
