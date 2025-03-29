@@ -31,6 +31,7 @@
 
 using PointType = pcl::PointXYZI;
 
+namespace kiss_matcher {
 inline void matrixEigenToTF2(const Eigen::Matrix3d &in, tf2::Matrix3x3 &out) {
   out.setValue(
       in(0, 0), in(0, 1), in(0, 2), in(1, 0), in(1, 1), in(1, 2), in(2, 0), in(2, 1), in(2, 2));
@@ -70,51 +71,51 @@ inline pcl::PointCloud<PointType>::Ptr voxelize(const pcl::PointCloud<PointType>
   return cloud_out;
 }
 
-inline gtsam::Pose3 poseEigToGtsamPose(const Eigen::Matrix4d &pose) {
+inline gtsam::Pose3 eigenToGtsam(const Eigen::Matrix4d &pose) {
   tf2::Matrix3x3 mat_tf;
   matrixEigenToTF2(pose.block<3, 3>(0, 0), mat_tf);
 
-  double r, p, y;
-  mat_tf.getRPY(r, p, y);  // roll, pitch, yaw
+  double roll, pitch, yaw;
+  mat_tf.getRPY(roll, pitch, yaw);
 
-  return gtsam::Pose3(gtsam::Rot3::RzRyRx(r, p, y),
+  return gtsam::Pose3(gtsam::Rot3::RzRyRx(roll, pitch, yaw),
                       gtsam::Point3(pose(0, 3), pose(1, 3), pose(2, 3)));
 }
 
-inline Eigen::Matrix4d gtsamPoseToPoseEig(const gtsam::Pose3 &pose_in) {
-  Eigen::Matrix4d pose_out = Eigen::Matrix4d::Identity();
+inline Eigen::Matrix4d gtsamToEigen(const gtsam::Pose3 &pose) {
+  Eigen::Matrix4d output = Eigen::Matrix4d::Identity();
 
   tf2::Quaternion quat;
-  quat.setRPY(pose_in.rotation().roll(), pose_in.rotation().pitch(), pose_in.rotation().yaw());
+  quat.setRPY(pose.rotation().roll(), pose.rotation().pitch(), pose.rotation().yaw());
 
   tf2::Matrix3x3 tf_rot(quat);
   Eigen::Matrix3d rot;
   matrixTF2ToEigen(tf_rot, rot);
 
-  pose_out.block<3, 3>(0, 0) = rot;
-  pose_out(0, 3)             = pose_in.translation().x();
-  pose_out(1, 3)             = pose_in.translation().y();
-  pose_out(2, 3)             = pose_in.translation().z();
+  output.block<3, 3>(0, 0) = rot;
+  output(0, 3)             = pose.translation().x();
+  output(1, 3)             = pose.translation().y();
+  output(2, 3)             = pose.translation().z();
 
-  return pose_out;
+  return output;
 }
 
-inline geometry_msgs::msg::PoseStamped poseEigToPoseStamped(const Eigen::Matrix4d &pose_in,
-                                                            const std::string &frame_id = "map") {
+inline geometry_msgs::msg::PoseStamped eigenToPoseStamped(const Eigen::Matrix4d &pose,
+                                                          const std::string &frame_id = "map") {
   tf2::Matrix3x3 mat_tf;
-  matrixEigenToTF2(pose_in.block<3, 3>(0, 0), mat_tf);
+  matrixEigenToTF2(pose.block<3, 3>(0, 0), mat_tf);
 
-  double r, p, y;
-  mat_tf.getRPY(r, p, y);
+  double roll, pitch, yaw;
+  mat_tf.getRPY(roll, pitch, yaw);
 
   tf2::Quaternion quat;
-  quat.setRPY(r, p, y);
+  quat.setRPY(roll, pitch, yaw);
 
   geometry_msgs::msg::PoseStamped msg;
   msg.header.frame_id    = frame_id;
-  msg.pose.position.x    = pose_in(0, 3);
-  msg.pose.position.y    = pose_in(1, 3);
-  msg.pose.position.z    = pose_in(2, 3);
+  msg.pose.position.x    = pose(0, 3);
+  msg.pose.position.y    = pose(1, 3);
+  msg.pose.position.z    = pose(2, 3);
   msg.pose.orientation.w = quat.w();
   msg.pose.orientation.x = quat.x();
   msg.pose.orientation.y = quat.y();
@@ -123,20 +124,20 @@ inline geometry_msgs::msg::PoseStamped poseEigToPoseStamped(const Eigen::Matrix4
   return msg;
 }
 
-inline geometry_msgs::msg::Pose poseEigToPoseGeo(const Eigen::Matrix4d &pose_in) {
+inline geometry_msgs::msg::Pose egienToGeoPose(const Eigen::Matrix4d &pose) {
   tf2::Matrix3x3 mat_tf;
-  matrixEigenToTF2(pose_in.block<3, 3>(0, 0), mat_tf);
+  matrixEigenToTF2(pose.block<3, 3>(0, 0), mat_tf);
 
-  double r, p, y;
-  mat_tf.getRPY(r, p, y);
+  double roll, pitch, yaw;
+  mat_tf.getRPY(roll, pitch, yaw);
 
   tf2::Quaternion quat;
-  quat.setRPY(r, p, y);
+  quat.setRPY(roll, pitch, yaw);
 
   geometry_msgs::msg::Pose msg;
-  msg.position.x    = pose_in(0, 3);
-  msg.position.y    = pose_in(1, 3);
-  msg.position.z    = pose_in(2, 3);
+  msg.position.x    = pose(0, 3);
+  msg.position.y    = pose(1, 3);
+  msg.position.z    = pose(2, 3);
   msg.orientation.w = quat.w();
   msg.orientation.x = quat.x();
   msg.orientation.y = quat.y();
@@ -145,20 +146,20 @@ inline geometry_msgs::msg::Pose poseEigToPoseGeo(const Eigen::Matrix4d &pose_in)
   return msg;
 }
 
-inline geometry_msgs::msg::PoseStamped gtsamPoseToPoseStamped(const gtsam::Pose3 &pose_in,
-                                                              const std::string &frame_id = "map") {
-  double roll  = pose_in.rotation().roll();
-  double pitch = pose_in.rotation().pitch();
-  double yaw   = pose_in.rotation().yaw();
+inline geometry_msgs::msg::PoseStamped gtsamToPoseStamped(const gtsam::Pose3 &pose,
+                                                          const std::string &frame_id = "map") {
+  double roll  = pose.rotation().roll();
+  double pitch = pose.rotation().pitch();
+  double yaw   = pose.rotation().yaw();
 
   tf2::Quaternion quat;
   quat.setRPY(roll, pitch, yaw);
 
   geometry_msgs::msg::PoseStamped msg;
   msg.header.frame_id    = frame_id;
-  msg.pose.position.x    = pose_in.translation().x();
-  msg.pose.position.y    = pose_in.translation().y();
-  msg.pose.position.z    = pose_in.translation().z();
+  msg.pose.position.x    = pose.translation().x();
+  msg.pose.position.y    = pose.translation().y();
+  msg.pose.position.z    = pose.translation().z();
   msg.pose.orientation.w = quat.w();
   msg.pose.orientation.x = quat.x();
   msg.pose.orientation.y = quat.y();
@@ -168,8 +169,8 @@ inline geometry_msgs::msg::PoseStamped gtsamPoseToPoseStamped(const gtsam::Pose3
 }
 
 template <typename T>
-inline sensor_msgs::msg::PointCloud2 pclToPclRos(const pcl::PointCloud<T> &cloud,
-                                                 const std::string &frame_id = "map") {
+inline sensor_msgs::msg::PointCloud2 toROSMsg(const pcl::PointCloud<T> &cloud,
+                                              const std::string &frame_id = "map") {
   sensor_msgs::msg::PointCloud2 cloud_ros;
   pcl::toROSMsg(cloud, cloud_ros);
   cloud_ros.header.frame_id = frame_id;
@@ -197,5 +198,5 @@ inline std::vector<Eigen::Vector3f> convertCloudToVec(const pcl::PointCloud<T> &
   }
   return vec;
 }
-
+}  // namespace kiss_matcher
 #endif  // KISS_MATCHER_UTILS_HPP

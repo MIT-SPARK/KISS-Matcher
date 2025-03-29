@@ -129,7 +129,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
     current_frame_.pose_corrected_ = last_corrected_pose_ * odom_delta_;
 
     geometry_msgs::msg::PoseStamped ps =
-        poseEigToPoseStamped(current_frame_.pose_corrected_, map_frame_);
+        eigenToPoseStamped(current_frame_.pose_corrected_, map_frame_);
     realtime_pose_pub_->publish(ps);
 
     geometry_msgs::msg::TransformStamped transform_stamped;
@@ -148,7 +148,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
   }
 
   scan_pub_->publish(
-      pclToPclRos(transformPcd(current_frame_.scan_, current_frame_.pose_corrected_), map_frame_));
+      toROSMsg(transformPcd(current_frame_.scan_, current_frame_.pose_corrected_), map_frame_));
 
   if (!is_initialized_) {
     keyframes_.push_back(current_frame_);
@@ -159,9 +159,9 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
         gtsam::noiseModel::Diagonal::Variances(variance_vector);
 
     gtsam_graph_.add(
-        gtsam::PriorFactor<gtsam::Pose3>(0, poseEigToGtsamPose(current_frame_.pose_), prior_noise));
+        gtsam::PriorFactor<gtsam::Pose3>(0, eigenToGtsam(current_frame_.pose_), prior_noise));
 
-    init_esti_.insert(current_keyframe_idx_, poseEigToGtsamPose(current_frame_.pose_));
+    init_esti_.insert(current_keyframe_idx_, eigenToGtsam(current_frame_.pose_));
     current_keyframe_idx_++;
     is_initialized_ = true;
 
@@ -177,9 +177,8 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
       gtsam::noiseModel::Diagonal::shared_ptr odom_noise =
           gtsam::noiseModel::Diagonal::Variances(variance_vector);
 
-      gtsam::Pose3 pose_from =
-          poseEigToGtsamPose(keyframes_[current_keyframe_idx_ - 1].pose_corrected_);
-      gtsam::Pose3 pose_to = poseEigToGtsamPose(current_frame_.pose_corrected_);
+      gtsam::Pose3 pose_from = eigenToGtsam(keyframes_[current_keyframe_idx_ - 1].pose_corrected_);
+      gtsam::Pose3 pose_to   = eigenToGtsam(current_frame_.pose_corrected_);
 
       {
         std::lock_guard<std::mutex> lock(graph_mutex_);
@@ -216,13 +215,13 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
         std::lock_guard<std::mutex> lock(realtime_pose_mutex_);
         corrected_esti_ = isam_handler_->calculateEstimate();
         last_corrected_pose_ =
-            gtsamPoseToPoseEig(corrected_esti_.at<gtsam::Pose3>(corrected_esti_.size() - 1));
+            gtsamToEigen(corrected_esti_.at<gtsam::Pose3>(corrected_esti_.size() - 1));
         odom_delta_ = Eigen::Matrix4d::Identity();
       }
       if (loop_added_flag_) {
         std::lock_guard<std::mutex> lock(keyframes_mutex_);
         for (size_t i = 0; i < corrected_esti_.size(); ++i) {
-          keyframes_[i].pose_corrected_ = gtsamPoseToPoseEig(corrected_esti_.at<gtsam::Pose3>(i));
+          keyframes_[i].pose_corrected_ = gtsamToEigen(corrected_esti_.at<gtsam::Pose3>(i));
         }
         loop_added_flag_ = false;
       }
@@ -286,7 +285,7 @@ void PoseGraphManager::buildMap() {
     }
 
     const auto &voxelized_map = voxelize(map_cloud_, map_voxel_res_);
-    map_pub_->publish(pclToPclRos(*voxelized_map, map_frame_));
+    map_pub_->publish(toROSMsg(*voxelized_map, map_frame_));
   }
 
   if (loop_added_flag_map_) {
@@ -312,9 +311,8 @@ void PoseGraphManager::detectLoopClosure() {
 
   if (reg_output.is_valid_) {
     RCLCPP_INFO(this->get_logger(), "LC accepted. Overlapness: %.3f", reg_output.overlapness_);
-    gtsam::Pose3 pose_from =
-        poseEigToGtsamPose(reg_output.pose_ * keyframes_.back().pose_corrected_);
-    gtsam::Pose3 pose_to = poseEigToGtsamPose(keyframes_[closest_keyframe_idx].pose_corrected_);
+    gtsam::Pose3 pose_from = eigenToGtsam(reg_output.pose_ * keyframes_.back().pose_corrected_);
+    gtsam::Pose3 pose_to   = eigenToGtsam(keyframes_[closest_keyframe_idx].pose_corrected_);
 
     // TODO(hlim): Parameterize
     auto variance_vector = (gtsam::Vector(6) << 1e-4, 1e-4, 1e-4, 1e-2, 1e-2, 1e-2).finished();
@@ -357,12 +355,11 @@ void PoseGraphManager::detectLoopClosure() {
   }
 
   auto t2 = high_resolution_clock::now();
-  debug_src_pub_->publish(pclToPclRos(loop_closure_->getSourceCloud(), map_frame_));
-  debug_tgt_pub_->publish(pclToPclRos(loop_closure_->getTargetCloud(), map_frame_));
-  debug_fine_aligned_pub_->publish(pclToPclRos(loop_closure_->getFinalAlignedCloud(), map_frame_));
-  debug_coarse_aligned_pub_->publish(
-      pclToPclRos(loop_closure_->getCoarseAlignedCloud(), map_frame_));
-  debug_cloud_pub_->publish(pclToPclRos(loop_closure_->getDebugCloud(), map_frame_));
+  debug_src_pub_->publish(toROSMsg(loop_closure_->getSourceCloud(), map_frame_));
+  debug_tgt_pub_->publish(toROSMsg(loop_closure_->getTargetCloud(), map_frame_));
+  debug_fine_aligned_pub_->publish(toROSMsg(loop_closure_->getFinalAlignedCloud(), map_frame_));
+  debug_coarse_aligned_pub_->publish(toROSMsg(loop_closure_->getCoarseAlignedCloud(), map_frame_));
+  debug_cloud_pub_->publish(toROSMsg(loop_closure_->getDebugCloud(), map_frame_));
 
   RCLCPP_INFO(this->get_logger(), "loop: %.1f", duration_cast<microseconds>(t2 - t1).count() / 1e3);
 }
@@ -387,7 +384,7 @@ void PoseGraphManager::publishVisualization() {
       corrected_odoms.points.emplace_back(
           pose_.translation().x(), pose_.translation().y(), pose_.translation().z());
 
-      corrected_path.poses.push_back(gtsamPoseToPoseStamped(pose_, map_frame_));
+      corrected_path.poses.push_back(gtsamToPoseStamped(pose_, map_frame_));
     }
     if (!loop_idx_pairs_.empty()) {
       loop_detection_pub_->publish(visualizeLoopMarkers(corrected_esti_copied));
@@ -446,7 +443,8 @@ void PoseGraphManager::saveFlagCallback(const std_msgs::msg::String::ConstShared
                         << pose_(1, 2) << " " << pose_(1, 3) << " " << pose_(2, 0) << " "
                         << pose_(2, 1) << " " << pose_(2, 2) << " " << pose_(2, 3) << "\n";
 
-        const auto &lidar_optim_pose_ = poseEigToPoseStamped(keyframes_[i].pose_corrected_);
+        const auto &lidar_optim_pose_ =
+            eigenToPoseStamped(keyframes_[i].pose_corrected_, map_frame_);
         tum_pose_file << std::fixed << std::setprecision(8) << keyframes_[i].timestamp_ << " "
                       << lidar_optim_pose_.pose.position.x << " "
                       << lidar_optim_pose_.pose.position.y << " "
@@ -510,8 +508,8 @@ void PoseGraphManager::updateOdomsAndPaths(const PoseGraphNode &pose_pcd_in) {
                                        pose_pcd_in.pose_corrected_(1, 3),
                                        pose_pcd_in.pose_corrected_(2, 3));
 
-  odom_path_.poses.emplace_back(poseEigToPoseStamped(pose_pcd_in.pose_, map_frame_));
-  corrected_path_.poses.emplace_back(poseEigToPoseStamped(pose_pcd_in.pose_corrected_, map_frame_));
+  odom_path_.poses.emplace_back(eigenToPoseStamped(pose_pcd_in.pose_, map_frame_));
+  corrected_path_.poses.emplace_back(eigenToPoseStamped(pose_pcd_in.pose_corrected_, map_frame_));
   return;
 }
 
