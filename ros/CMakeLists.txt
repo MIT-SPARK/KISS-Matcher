@@ -94,7 +94,9 @@ target_link_libraries(registration_visualizer
   ${PCL_LIBRARIES}
 )
 
-add_executable(kiss_matcher_sam src/slam/pose_graph_manager.cpp src/slam/loop_closure.cpp)
+add_executable(kiss_matcher_sam src/slam/pose_graph_manager.cpp
+                                src/slam/loop_closure.cpp
+                                src/slam/loop_detector.cpp)
 ament_target_dependencies(kiss_matcher_sam
   rclcpp
   tf2_ros
