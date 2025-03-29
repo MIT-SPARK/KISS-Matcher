@@ -87,6 +87,7 @@ class PoseGraphManager : public rclcpp::Node {
                             const rclcpp::Time &timestamp,
                             const std::string &frame_id);
   void visualizePoseGraph();
+  void visualizeLoopClosureClouds();
 
   visualization_msgs::msg::Marker visualizeLoopMarkers(const gtsam::Values &corrected_poses) const;
   visualization_msgs::msg::Marker visualizeLoopDetectionRadius(
@@ -112,11 +113,11 @@ class PoseGraphManager : public rclcpp::Node {
   kiss_matcher::PoseGraphNode current_frame_;
   std::vector<kiss_matcher::PoseGraphNode> keyframes_;
 
-  bool is_initialized_        = false;
-  bool loop_closure_added_    = false;
-  bool need_map_update_       = false;
-  bool need_graph_vis_update_ = false;
-  bool need_reg_vis_update_   = false;
+  bool is_initialized_           = false;
+  bool loop_closure_added_       = false;
+  bool need_map_update_          = false;
+  bool need_graph_vis_update_    = false;
+  bool need_lc_cloud_vis_update_ = false;
 
   std::shared_ptr<gtsam::ISAM2> isam_handler_ = nullptr;
   gtsam::NonlinearFactorGraph gtsam_graph_;
@@ -182,7 +183,8 @@ class PoseGraphManager : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr map_timer_;
   rclcpp::TimerBase::SharedPtr loop_detector_timer_;
   rclcpp::TimerBase::SharedPtr loop_nnsearch_timer_;
-  rclcpp::TimerBase::SharedPtr vis_timer_;
+  rclcpp::TimerBase::SharedPtr graph_vis_timer_;
+  rclcpp::TimerBase::SharedPtr lc_vis_timer_;
 };
 
 #endif  // KISS_MATCHER_POSE_GRAPH_MANAGER_H

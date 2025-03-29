@@ -124,8 +124,14 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
       this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_nnsearch_hz),
                               std::bind(&PoseGraphManager::detectLoopClosureByNNSearch, this));
 
-  vis_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),
-                                       std::bind(&PoseGraphManager::visualizePoseGraph, this));
+  graph_vis_timer_ =
+      this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),
+                              std::bind(&PoseGraphManager::visualizePoseGraph, this));
+
+  // 20 Hz is enough as long as it's faster than the full registration process.
+  lc_vis_timer_ =
+      this->create_wall_timer(std::chrono::duration<double>(1.0 / 20.0),
+                              std::bind(&PoseGraphManager::visualizeLoopClosureClouds, this));
 
   if (!lc_config.is_multilayer_env_) {
     RCLCPP_WARN(
@@ -369,9 +375,10 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
     }
 
     loop_idx_pairs_.push_back({query.idx_, loop_candidate.idx_});
-    loop_closure_added_    = true;
-    need_map_update_       = true;
-    need_graph_vis_update_ = true;
+    loop_closure_added_       = true;
+    need_map_update_          = true;
+    need_graph_vis_update_    = true;
+    need_lc_cloud_vis_update_ = true;
 
     // --------------------------------------------------
     // TODO(hlim): resurrect pose_graph_tools_msgs
@@ -400,13 +407,6 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
       RCLCPP_WARN(this->get_logger(), "LC rejected. Overlapness: %.3f", reg_output.overlapness_);
     }
   }
-
-  debug_src_pub_->publish(toROSMsg(loop_closure_->getSourceCloud(), map_frame_));
-  debug_tgt_pub_->publish(toROSMsg(loop_closure_->getTargetCloud(), map_frame_));
-  debug_fine_aligned_pub_->publish(toROSMsg(loop_closure_->getFinalAlignedCloud(), map_frame_));
-  debug_coarse_aligned_pub_->publish(toROSMsg(loop_closure_->getCoarseAlignedCloud(), map_frame_));
-  debug_cloud_pub_->publish(toROSMsg(loop_closure_->getDebugCloud(), map_frame_));
-
   RCLCPP_INFO(this->get_logger(), "Loop closure: %.1f msec", lc_timer.toc());
 }
 
@@ -484,6 +484,19 @@ void PoseGraphManager::visualizePoseGraph() {
     path_pub_->publish(odom_path_);
     corrected_path_pub_->publish(corrected_path_);
   }
+}
+
+void PoseGraphManager::visualizeLoopClosureClouds() {
+  if (!need_lc_cloud_vis_update_) {
+    return;
+  }
+
+  debug_src_pub_->publish(toROSMsg(loop_closure_->getSourceCloud(), map_frame_));
+  debug_tgt_pub_->publish(toROSMsg(loop_closure_->getTargetCloud(), map_frame_));
+  debug_fine_aligned_pub_->publish(toROSMsg(loop_closure_->getFinalAlignedCloud(), map_frame_));
+  debug_coarse_aligned_pub_->publish(toROSMsg(loop_closure_->getCoarseAlignedCloud(), map_frame_));
+  debug_cloud_pub_->publish(toROSMsg(loop_closure_->getDebugCloud(), map_frame_));
+  need_lc_cloud_vis_update_ = false;
 }
 
 visualization_msgs::msg::Marker PoseGraphManager::visualizeLoopMarkers(
