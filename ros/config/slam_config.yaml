@@ -29,7 +29,7 @@
       verbose: true                  # Enable verbose output
       # NOTE(hlim): You may need to tune `loop_detection_radius` and `loop_detection_timediff_threshold` for your environment
       # after checking the Loop closure radius marker in Rviz.
-      loop_detection_radius: 10.0             # ⭐ [Unit: m] Radius for detecting loop candidates.
+      loop_detection_radius: 20.0             # ⭐ [Unit: m] Radius for detecting loop candidates.
       loop_detection_timediff_threshold: 90.0 # ⭐ [Unit: t] Minimum time difference for loop candidates
 
     local_reg:
@@ -42,7 +42,7 @@
       # NOTE(hlim): The best value of `overlap_threshold` highly depends on `num_submap_keyframes`
       # Thus, heuristic tuning is required for the best performance.
       # Larger values make it more conservative (i.e., higher `overlap_threshold` enhances LC precision)
-      overlap_threshold: 60.0         # ⭐ [Unit: %] Threshold for the ratio of ICP inliers
+      overlap_threshold: 70.0         # ⭐ [Unit: %] Threshold for the ratio of ICP inliers
                                       # (i.e., the percentage of correspondences within `corr_dist`).
                                       # A value close to 100% means the source and target are nearly perfectly aligned.
                                       # In cases of partial overlap, this ratio can never reach 100%.

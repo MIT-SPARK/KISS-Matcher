@@ -23,7 +23,6 @@ struct PoseGraphNode {
                        const sensor_msgs::msg::PointCloud2 &scan,
                        const int &idx,
                        const bool is_wrt_lidar_frame = false) {
-    // Orientation
     tf2::Quaternion q;
     q.setX(odom.pose.pose.orientation.x);
     q.setY(odom.pose.pose.orientation.y);
