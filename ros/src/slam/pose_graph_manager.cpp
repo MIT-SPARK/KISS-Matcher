@@ -131,7 +131,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
     RCLCPP_WARN(
         get_logger(),
         "'loop.is_multilayer_env' is set to `false`. "
-        "This setting is recommended for outdoor environments to reduce the effect of Z-drift. "
+        "This setting is recommended for outdoor environments to ignore the effect of Z-drift. "
         "However, if you're running SLAM in an indoor multi-layer environment, "
         "consider setting it to true to enable full 3D NN search for loop candidates.");
   }
