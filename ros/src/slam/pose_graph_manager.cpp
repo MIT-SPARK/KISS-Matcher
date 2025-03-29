@@ -171,8 +171,10 @@ void PoseGraphManager::appendKeyframePose(const PoseGraphNode &node) {
 
 void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
                                     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &scan_msg) {
+  static size_t latest_keyframe_idx = 0;
+
   Eigen::Matrix4d lastest_odom = current_frame_.pose_;
-  current_frame_               = PoseGraphNode(*odom_msg, *scan_msg, current_keyframe_idx_);
+  current_frame_               = PoseGraphNode(*odom_msg, *scan_msg, latest_keyframe_idx);
 
   kiss_matcher::TicToc total_timer;
   kiss_matcher::TicToc local_timer;
@@ -190,8 +192,8 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
     gtsam_graph_.add(
         gtsam::PriorFactor<gtsam::Pose3>(0, eigenToGtsam(current_frame_.pose_), prior_noise));
 
-    init_esti_.insert(current_keyframe_idx_, eigenToGtsam(current_frame_.pose_));
-    current_keyframe_idx_++;
+    init_esti_.insert(latest_keyframe_idx, eigenToGtsam(current_frame_.pose_));
+    ++latest_keyframe_idx;
     is_initialized_ = true;
 
     RCLCPP_INFO(this->get_logger(), "The first node comes. Initialization complete.");
@@ -208,19 +210,17 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
       gtsam::noiseModel::Diagonal::shared_ptr odom_noise =
           gtsam::noiseModel::Diagonal::Variances(variance_vector);
 
-      gtsam::Pose3 pose_from = eigenToGtsam(keyframes_[current_keyframe_idx_ - 1].pose_corrected_);
+      gtsam::Pose3 pose_from = eigenToGtsam(keyframes_[latest_keyframe_idx - 1].pose_corrected_);
       gtsam::Pose3 pose_to   = eigenToGtsam(current_frame_.pose_corrected_);
 
       {
         std::lock_guard<std::mutex> lock(graph_mutex_);
-        gtsam_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(current_keyframe_idx_ - 1,
-                                                            current_keyframe_idx_,
-                                                            pose_from.between(pose_to),
-                                                            odom_noise));
-        init_esti_.insert(current_keyframe_idx_, pose_to);
+        gtsam_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(
+            latest_keyframe_idx - 1, latest_keyframe_idx, pose_from.between(pose_to), odom_noise));
+        init_esti_.insert(latest_keyframe_idx, pose_to);
       }
 
-      current_keyframe_idx_++;
+      ++latest_keyframe_idx;
       {
         std::lock_guard<std::mutex> lock(vis_mutex_);
         appendKeyframePose(current_frame_);

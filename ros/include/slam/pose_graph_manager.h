@@ -111,7 +111,6 @@ class PoseGraphManager : public rclcpp::Node {
   Eigen::Matrix4d odom_delta_          = Eigen::Matrix4d::Identity();
   kiss_matcher::PoseGraphNode current_frame_;
   std::vector<kiss_matcher::PoseGraphNode> keyframes_;
-  int current_keyframe_idx_ = 0;
 
   bool is_initialized_                        = false;
   bool loop_added_flag_                       = false;
