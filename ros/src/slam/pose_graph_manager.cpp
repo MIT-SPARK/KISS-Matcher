@@ -254,7 +254,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
 
       RCLCPP_INFO(this->get_logger(), "# of Keyframes: %zu", keyframes_.size());
       RCLCPP_INFO(this->get_logger(),
-                  "Timing (ms) → Total: %.1f | Keyframe: %.1f | Optim.: %.1f",
+                  "Timing (msec) → Total: %.1f | Keyframe: %.1f | Optim.: %.1f",
                   t_total,
                   t_keyframe_processing,
                   t_optim);
@@ -400,7 +400,7 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
   debug_coarse_aligned_pub_->publish(toROSMsg(loop_closure_->getCoarseAlignedCloud(), map_frame_));
   debug_cloud_pub_->publish(toROSMsg(loop_closure_->getDebugCloud(), map_frame_));
 
-  RCLCPP_INFO(this->get_logger(), "Loop closure: %.1fmsec", lc_timer.toc());
+  RCLCPP_INFO(this->get_logger(), "Loop closure: %.1f msec", lc_timer.toc());
 }
 
 void PoseGraphManager::visualizePoseGraph() {
