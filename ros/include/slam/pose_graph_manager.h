@@ -52,6 +52,7 @@
 #include <gtsam/slam/BetweenFactor.h>
 #include <gtsam/slam/PriorFactor.h>
 
+#include "../tictoc.hpp"
 #include "slam/loop_closure.h"
 #include "slam/loop_detector.h"
 #include "slam/pose_graph_node.hpp"
@@ -123,6 +124,8 @@ class PoseGraphManager : public rclcpp::Node {
   int sub_key_num_;
   std::vector<std::pair<size_t, size_t>> loop_idx_pairs_;
   // pose_graph_tools_msgs::msg::PoseGraph loop_msgs_;
+
+  kiss_matcher::TicToc timer_;
 
   std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
 

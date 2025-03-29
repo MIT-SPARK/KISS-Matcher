@@ -145,7 +145,8 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
 
   RCLCPP_INFO(this->get_logger(), "%d th node comes.", current_keyframe_idx_);
 
-  auto t1 = high_resolution_clock::now();
+  kiss_matcher::TicToc total_timer;
+  kiss_matcher::TicToc local_timer;
 
   {
     std::lock_guard<std::mutex> lock(realtime_pose_mutex_);
@@ -190,7 +191,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
     is_initialized_ = true;
 
   } else {
-    auto t2 = high_resolution_clock::now();
+    const auto t_keyframe_processing = local_timer.toc();
     if (checkIfKeyframe(current_frame_, keyframes_.back())) {
       {
         std::lock_guard<std::mutex> lock(keyframes_mutex_);
@@ -214,13 +215,12 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
       }
 
       current_keyframe_idx_++;
-      auto t3 = high_resolution_clock::now();
       {
         std::lock_guard<std::mutex> lock(vis_mutex_);
         updateOdomsAndPaths(current_frame_);
       }
 
-      auto t4 = high_resolution_clock::now();
+      local_timer.tic();
       {
         std::lock_guard<std::mutex> lock(graph_mutex_);
         isam_handler_->update(gtsam_graph_, init_esti_);
@@ -233,8 +233,8 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
         gtsam_graph_.resize(0);
         init_esti_.clear();
       }
+      const auto t_optim = local_timer.toc();
 
-      auto t5 = high_resolution_clock::now();
       {
         std::lock_guard<std::mutex> lock(realtime_pose_mutex_);
         corrected_esti_ = isam_handler_->calculateEstimate();
@@ -249,25 +249,15 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
         }
         loop_added_flag_ = false;
       }
-      auto t6 = high_resolution_clock::now();
 
-      auto ms12 = duration_cast<microseconds>(t2 - t1).count() / 1e3;
-      auto ms23 = duration_cast<microseconds>(t3 - t2).count() / 1e3;
-      auto ms34 = duration_cast<microseconds>(t4 - t3).count() / 1e3;
-      auto ms45 = duration_cast<microseconds>(t5 - t4).count() / 1e3;
-      auto ms56 = duration_cast<microseconds>(t6 - t5).count() / 1e3;
-      auto ms16 = duration_cast<microseconds>(t6 - t1).count() / 1e3;
+      const auto t_total = total_timer.toc();
 
+      RCLCPP_INFO(this->get_logger(), "# of Keyframes: %zu", keyframes_.size());
       RCLCPP_INFO(this->get_logger(),
-                  "real: %.1f, key_add: %.1f, vis: %.1f, opt: %.1f, res: %.1f, tot: %.1fms, # "
-                  "keyframes: %i",
-                  ms12,
-                  ms23,
-                  ms34,
-                  ms45,
-                  ms56,
-                  ms16,
-                  static_cast<int>(keyframes_.size()));
+                  "Timing (ms) → Total: %.1f | Keyframe: %.1f | Optim.: %.1f",
+                  t_total,
+                  t_keyframe_processing,
+                  t_optim);
     }
   }
 }
@@ -329,21 +319,24 @@ void PoseGraphManager::detectLoopClosureByLoopDetector() {
   }
   query.loop_detector_processed_ = true;
 
-  auto t1                    = high_resolution_clock::now();
+  kiss_matcher::TicToc ld_timer;
   const auto &loop_candidate = loop_detector_->fetchLoopCandidate(query, keyframes_);
   if (!loop_candidate.found_) {
     return;
   }
+
+  const auto t_ld = ld_timer.toc();
 }
 
 void PoseGraphManager::detectLoopClosureByNNSearch() {
+  kiss_matcher::TicToc lc_timer;
+
   auto &query = keyframes_.back();
   if (!is_initialized_ || keyframes_.empty() || query.nnsearch_processed_) {
     return;
   }
   query.nnsearch_processed_ = true;
 
-  auto t1                    = high_resolution_clock::now();
   const auto &loop_candidate = loop_closure_->fetchClosestCandidate(query, keyframes_);
   if (!loop_candidate.found_) {
     return;
@@ -394,17 +387,20 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
     // --------------------------------------------------
 
   } else {
-    RCLCPP_WARN(this->get_logger(), "LC rejected. Overlapness: %.3f", reg_output.overlapness_);
+    if (reg_output.overlapness_ == 0.0) {
+      RCLCPP_WARN(this->get_logger(), "LC rejected. KISS-Matcher failed");
+    } else {
+      RCLCPP_WARN(this->get_logger(), "LC rejected. Overlapness: %.3f", reg_output.overlapness_);
+    }
   }
 
-  auto t2 = high_resolution_clock::now();
   debug_src_pub_->publish(toROSMsg(loop_closure_->getSourceCloud(), map_frame_));
   debug_tgt_pub_->publish(toROSMsg(loop_closure_->getTargetCloud(), map_frame_));
   debug_fine_aligned_pub_->publish(toROSMsg(loop_closure_->getFinalAlignedCloud(), map_frame_));
   debug_coarse_aligned_pub_->publish(toROSMsg(loop_closure_->getCoarseAlignedCloud(), map_frame_));
   debug_cloud_pub_->publish(toROSMsg(loop_closure_->getDebugCloud(), map_frame_));
 
-  RCLCPP_INFO(this->get_logger(), "loop: %.1f", duration_cast<microseconds>(t2 - t1).count() / 1e3);
+  RCLCPP_INFO(this->get_logger(), "Loop closure: %.1fmsec", lc_timer.toc());
 }
 
 void PoseGraphManager::publishVisualization() {
@@ -412,7 +408,6 @@ void PoseGraphManager::publishVisualization() {
     return;
   }
 
-  auto tv1 = high_resolution_clock::now();
   if (loop_added_flag_vis_) {
     gtsam::Values corrected_esti_copied;
     pcl::PointCloud<pcl::PointXYZ> corrected_odoms;
@@ -447,10 +442,6 @@ void PoseGraphManager::publishVisualization() {
     loop_detection_radius_pub_->publish(
         visualizeLoopDetectionRadius(corrected_path_.poses.back().pose.position));
   }
-
-  auto tv2 = high_resolution_clock::now();
-  RCLCPP_INFO(
-      this->get_logger(), "vis: %.1fms", duration_cast<microseconds>(tv2 - tv1).count() / 1e3);
 }
 
 void PoseGraphManager::saveFlagCallback(const std_msgs::msg::String::ConstSharedPtr &msg) {
