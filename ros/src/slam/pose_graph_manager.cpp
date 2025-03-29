@@ -258,12 +258,13 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
 
       const auto t_total = total_timer.toc();
 
-      RCLCPP_INFO(this->get_logger(), "# of Keyframes: %zu", keyframes_.size());
-      RCLCPP_INFO(this->get_logger(),
-                  "Timing (msec) → Total: %.1f | Keyframe: %.1f | Optim.: %.1f",
-                  t_total,
-                  t_keyframe_processing,
-                  t_optim);
+      RCLCPP_INFO(
+          this->get_logger(),
+          "# of Keyframes: %zu. Timing (msec) → Total: %.1f | Keyframe: %.1f | Optim.: %.1f",
+          keyframes_.size(),
+          t_total,
+          t_keyframe_processing,
+          t_optim);
     }
   }
 }
