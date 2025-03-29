@@ -22,6 +22,8 @@
 #include "slam/pose_graph_node.hpp"
 #include "slam/utils.hpp"
 
+#define LOOP_CANDIDATE_NOT_FOUND -1
+
 using NodePair = std::tuple<pcl::PointCloud<PointType>, pcl::PointCloud<PointType>>;
 
 namespace kiss_matcher {

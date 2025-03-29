@@ -32,7 +32,7 @@ int LoopClosure::fetchClosestKeyframeIdx(const PoseGraphNode &front_keyframe,
   const auto &loop_det_radi      = config_.loop_detection_radius_;
   const auto &loop_det_tdiff_thr = config_.loop_detection_timediff_threshold_;
   double shortest_distance_      = loop_det_radi * 3.0;
-  int closest_idx                = -1;
+  int closest_idx                = LOOP_CANDIDATE_NOT_FOUND;
   for (size_t idx = 0; idx < keyframes.size() - 1; ++idx) {
     // check if potential loop: close enough in distance, far enough in time
     double tmp_dist = (keyframes[idx].pose_corrected_.block<3, 1>(0, 3) -
