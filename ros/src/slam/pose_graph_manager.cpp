@@ -97,11 +97,11 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   debug_cloud_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>("lc/debug_cloud", 10);
 
   sub_odom_ = std::make_shared<message_filters::Subscriber<nav_msgs::msg::Odometry>>(this, "/odom");
-  sub_pcd_ =
+  sub_scan_ =
       std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(this, "/cloud");
 
   sub_node_ = std::make_shared<message_filters::Synchronizer<odom_pcd_sync_pol>>(
-      odom_pcd_sync_pol(10), *sub_odom_, *sub_pcd_);
+      odom_pcd_sync_pol(10), *sub_odom_, *sub_scan_);
   sub_node_->registerCallback(std::bind(
       &PoseGraphManager::callbackNode, this, std::placeholders::_1, std::placeholders::_2));
 

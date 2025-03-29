@@ -163,7 +163,7 @@ class PoseGraphManager : public rclcpp::Node {
 
   // message_filters
   std::shared_ptr<message_filters::Subscriber<nav_msgs::msg::Odometry>> sub_odom_;
-  std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>> sub_pcd_;
+  std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>> sub_scan_;
   std::shared_ptr<message_filters::Synchronizer<odom_pcd_sync_pol>> sub_node_;
 
   // timers
