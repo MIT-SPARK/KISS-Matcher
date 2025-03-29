@@ -81,9 +81,9 @@ class LoopClosure {
   LoopCandidate fetchClosestCandidate(const PoseGraphNode &query_frame,
                                       const std::vector<PoseGraphNode> &keyframes);
   NodePair setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyframes,
-                             const int src_idx,
-                             const int tgt_idx,
-                             const int submap_range,
+                             const size_t src_idx,
+                             const size_t tgt_idx,
+                             const size_t num_submap_keyframes,
                              const double voxel_res,
                              const bool enable_global_registration);
   RegOutput icpAlignment(const pcl::PointCloud<PointType> &src,

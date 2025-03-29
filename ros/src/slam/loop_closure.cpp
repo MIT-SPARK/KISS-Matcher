@@ -62,13 +62,13 @@ LoopCandidate LoopClosure::fetchClosestCandidate(const PoseGraphNode &query_fram
 }
 
 NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyframes,
-                                        const int src_idx,
-                                        const int tgt_idx,
-                                        const int num_submap_keyframes,
+                                        const size_t src_idx,
+                                        const size_t tgt_idx,
+                                        const size_t num_submap_keyframes,
                                         const double voxel_res,
                                         const bool enable_global_registration) {
-  const int submap_range = num_submap_keyframes / 2;
-  const int num_approx   = keyframes[src_idx].scan_.size() * num_submap_keyframes;
+  const size_t submap_range = num_submap_keyframes / 2;
+  const size_t num_approx   = keyframes[src_idx].scan_.size() * num_submap_keyframes;
 
   pcl::PointCloud<PointType> tgt_accum, src_accum;
   src_accum.reserve(num_approx);
@@ -76,17 +76,17 @@ NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyfra
 
   const bool build_submap = (num_submap_keyframes > 1);
 
+  auto accumulateSubmap = [&](size_t center_idx, pcl::PointCloud<PointType> &accum) {
+    const size_t start = (center_idx < submap_range) ? 0 : center_idx - submap_range;
+    const size_t end   = std::min(center_idx + submap_range + 1, keyframes.size());
+    for (size_t i = start; i < end; ++i) {
+      accum += transformPcd(keyframes[i].scan_, keyframes[i].pose_corrected_);
+    }
+  };
+
   if (build_submap) {
-    for (int i = src_idx - submap_range; i < src_idx + submap_range + 1; ++i) {
-      if (i >= 0 && i < static_cast<int>(keyframes.size() - 1)) {
-        src_accum += transformPcd(keyframes[i].scan_, keyframes[i].pose_corrected_);
-      }
-    }
-    for (int i = tgt_idx - submap_range; i < tgt_idx + submap_range + 1; ++i) {
-      if (i >= 0 && i < static_cast<int>(keyframes.size() - 1)) {
-        tgt_accum += transformPcd(keyframes[i].scan_, keyframes[i].pose_corrected_);
-      }
-    }
+    accumulateSubmap(src_idx, src_accum);
+    accumulateSubmap(tgt_idx, tgt_accum);
   } else {
     src_accum = transformPcd(keyframes[src_idx].scan_, keyframes[src_idx].pose_corrected_);
     if (enable_global_registration) {
@@ -94,11 +94,7 @@ NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyfra
     } else {
       // For ICP matching,
       // empirically scan-to-submap matching works better than scan-to-scan matching
-      for (int i = tgt_idx - submap_range; i < tgt_idx + submap_range + 1; ++i) {
-        if (i >= 0 && i < static_cast<int>(keyframes.size() - 1)) {
-          tgt_accum += transformPcd(keyframes[i].scan_, keyframes[i].pose_corrected_);
-        }
-      }
+      accumulateSubmap(tgt_idx, tgt_accum);
     }
   }
   return {*voxelize(src_accum, voxel_res), *voxelize(tgt_accum, voxel_res)};
