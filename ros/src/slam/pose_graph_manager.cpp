@@ -334,19 +334,19 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
   keyframes_.back().nnsearch_processed_ = true;
 
   auto t1 = high_resolution_clock::now();
-  const int closest_keyframe_idx =
+  const auto &loop_candidate =
       loop_closure_->fetchClosestKeyframeIdx(keyframes_.back(), keyframes_);
-  if (closest_keyframe_idx < 0) {
+  if (!loop_candidate.found_) {
     return;
   }
 
   const RegOutput &reg_output =
-      loop_closure_->performLoopClosure(keyframes_.back(), keyframes_, closest_keyframe_idx);
+      loop_closure_->performLoopClosure(keyframes_.back(), keyframes_, loop_candidate.idx_);
 
   if (reg_output.is_valid_) {
     RCLCPP_INFO(this->get_logger(), "LC accepted. Overlapness: %.3f", reg_output.overlapness_);
     gtsam::Pose3 pose_from = eigenToGtsam(reg_output.pose_ * keyframes_.back().pose_corrected_);
-    gtsam::Pose3 pose_to   = eigenToGtsam(keyframes_[closest_keyframe_idx].pose_corrected_);
+    gtsam::Pose3 pose_to   = eigenToGtsam(keyframes_[loop_candidate.idx_].pose_corrected_);
 
     // TODO(hlim): Parameterize
     auto variance_vector = (gtsam::Vector(6) << 1e-4, 1e-4, 1e-4, 1e-2, 1e-2, 1e-2).finished();
@@ -356,10 +356,10 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
     {
       std::lock_guard<std::mutex> lock(graph_mutex_);
       gtsam_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(
-          keyframes_.back().idx_, closest_keyframe_idx, pose_from.between(pose_to), loop_noise));
+          keyframes_.back().idx_, loop_candidate.idx_, pose_from.between(pose_to), loop_noise));
     }
 
-    loop_idx_pairs_.push_back({keyframes_.back().idx_, closest_keyframe_idx});
+    loop_idx_pairs_.push_back({keyframes_.back().idx_, loop_candidate.idx_});
     loop_added_flag_     = true;
     loop_added_flag_map_ = true;
     loop_added_flag_vis_ = true;

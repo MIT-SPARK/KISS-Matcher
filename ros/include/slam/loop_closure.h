@@ -19,10 +19,9 @@
 #include <small_gicp/pcl/pcl_registration.hpp>
 
 #include "rclcpp/rclcpp.hpp"
+#include "slam/loop_candidate.hpp"
 #include "slam/pose_graph_node.hpp"
 #include "slam/utils.hpp"
-
-#define LOOP_CANDIDATE_NOT_FOUND -1
 
 using NodePair = std::tuple<pcl::PointCloud<PointType>, pcl::PointCloud<PointType>>;
 
@@ -77,8 +76,8 @@ class LoopClosure {
  public:
   explicit LoopClosure(const LoopClosureConfig &config, const rclcpp::Logger &logger);
   ~LoopClosure();
-  int fetchClosestKeyframeIdx(const PoseGraphNode &query_keyframe,
-                              const std::vector<PoseGraphNode> &keyframes);
+  LoopCandidate fetchClosestKeyframeIdx(const PoseGraphNode &query_keyframe,
+                                        const std::vector<PoseGraphNode> &keyframes);
   NodePair setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyframes,
                              const int src_idx,
                              const int tgt_idx,
