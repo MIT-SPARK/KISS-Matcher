@@ -17,12 +17,10 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   map_update_hz          = declare_parameter<double>("map_update_hz", 0.2);
   vis_hz                 = declare_parameter<double>("vis_hz", 0.5);
 
-  lc_config.voxel_res_            = declare_parameter<double>("voxel_resolution", 0.3);
-  voxel_res_                      = declare_parameter<double>("save_voxel_resolution", 0.3);
-  keyframe_thr_                   = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
-  lc_config.num_submap_keyframes_ = declare_parameter<int>("keyframe.num_submap_keyframes", 5);
-  lc_config.enable_submap_matching_ =
-      declare_parameter<bool>("keyframe.enable_submap_matching", false);
+  lc_config.voxel_res_             = declare_parameter<double>("voxel_resolution", 0.3);
+  voxel_res_                       = declare_parameter<double>("save_voxel_resolution", 0.3);
+  keyframe_thr_                    = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
+  lc_config.num_submap_keyframes_  = declare_parameter<int>("keyframe.num_submap_keyframes", 5);
   lc_config.verbose_               = declare_parameter<bool>("loop.verbose", false);
   lc_config.loop_detection_radius_ = declare_parameter<double>("loop.loop_detection_radius", 15.0);
   lc_config.loop_detection_timediff_threshold_ =
@@ -560,10 +558,11 @@ visualization_msgs::msg::Marker PoseGraphManager::visualizeLoopDetectionRadius(
   sphere.scale.x         = 2 * loop_detection_radius_;
   sphere.scale.y         = 2 * loop_detection_radius_;
   sphere.scale.z         = 2 * loop_detection_radius_;
-  sphere.color.r         = 0.0;
-  sphere.color.g         = 0.824;
-  sphere.color.b         = 1.0;
-  sphere.color.a         = 0.5;
+  // Use transparanet cyan color
+  sphere.color.r = 0.0;
+  sphere.color.g = 0.824;
+  sphere.color.b = 1.0;
+  sphere.color.a = 0.5;
 
   return sphere;
 }

@@ -52,15 +52,19 @@ int LoopClosure::fetchClosestKeyframeIdx(const PoseGraphNode &front_keyframe,
 NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyframes,
                                         const int src_idx,
                                         const int tgt_idx,
-                                        const int submap_range,
+                                        const int num_submap_keyframes,
                                         const double voxel_res,
-                                        const bool enable_global_registration,
-                                        const bool enable_submap_matching) {
+                                        const bool enable_global_registration) {
+  const int submap_range = num_submap_keyframes / 2;
+  const int num_approx   = keyframes[src_idx].scan_.size() * num_submap_keyframes;
+
   pcl::PointCloud<PointType> tgt_accum, src_accum;
-  int num_approx = keyframes[src_idx].scan_.size() * 2 * submap_range;
   src_accum.reserve(num_approx);
   tgt_accum.reserve(num_approx);
-  if (enable_submap_matching) {
+
+  const bool build_submap = (num_submap_keyframes > 1);
+
+  if (build_submap) {
     for (int i = src_idx - submap_range; i < src_idx + submap_range + 1; ++i) {
       if (i >= 0 && i < static_cast<int>(keyframes.size() - 1)) {
         src_accum += transformPcd(keyframes[i].scan_, keyframes[i].pose_corrected_);
@@ -77,7 +81,7 @@ NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyfra
       tgt_accum = transformPcd(keyframes[tgt_idx].scan_, keyframes[tgt_idx].pose_corrected_);
     } else {
       // For ICP matching,
-      // empirically scan-to-submap matching works better
+      // empirically scan-to-submap matching works better than scan-to-scan matching
       for (int i = tgt_idx - submap_range; i < tgt_idx + submap_range + 1; ++i) {
         if (i >= 0 && i < static_cast<int>(keyframes.size() - 1)) {
           tgt_accum += transformPcd(keyframes[i].scan_, keyframes[i].pose_corrected_);
@@ -148,7 +152,6 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
   if (!solution.valid) {
     return reg_output;
   } else {
-    // coarse align with the result of Quatro
     *coarse_aligned_        = transformPcd(src, coarse_alignment);
     const auto &fine_output = icpAlignment(*coarse_aligned_, tgt);
     reg_output              = fine_output;
@@ -177,8 +180,7 @@ RegOutput LoopClosure::performLoopClosure(const PoseGraphNode &query_keyframe,
                                                            closest_keyframe_idx_,
                                                            config_.num_submap_keyframes_,
                                                            config_.voxel_res_,
-                                                           config_.enable_global_registration_,
-                                                           config_.enable_submap_matching_);
+                                                           config_.enable_global_registration_);
     // Only for visualization
     *src_cloud_ = src_cloud;
     *tgt_cloud_ = tgt_cloud;

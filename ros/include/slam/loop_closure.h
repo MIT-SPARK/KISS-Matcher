@@ -37,7 +37,6 @@ struct GICPConfig {
 struct LoopClosureConfig {
   bool verbose_                    = false;
   bool enable_global_registration_ = true;
-  bool enable_submap_matching_     = true;
   int num_submap_keyframes_        = 10;
   double voxel_res_                = 0.1;
   double loop_detection_radius_;
@@ -79,8 +78,7 @@ class LoopClosure {
                              const int tgt_idx,
                              const int submap_range,
                              const double voxel_res,
-                             const bool enable_global_registration,
-                             const bool enable_submap_matching);
+                             const bool enable_global_registration);
   RegOutput icpAlignment(const pcl::PointCloud<PointType> &src,
                          const pcl::PointCloud<PointType> &tgt);
   RegOutput coarseToFineAlignment(const pcl::PointCloud<PointType> &src,
