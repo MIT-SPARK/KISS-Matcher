@@ -313,6 +313,20 @@ void PoseGraphManager::buildMap() {
   }
 }
 
+void PoseGraphManager::detectLoopClosureByLoopDetector() {
+  if (!is_initialized_ || keyframes_.empty() || keyframes_.back().loop_detector_processed_) {
+    return;
+  }
+  keyframes_.back().loop_detector_processed_ = true;
+
+  auto t1 = high_resolution_clock::now();
+  const int closest_keyframe_idx =
+      loop_detector_->fetchLoopCandidateIdx(keyframes_.back(), keyframes_);
+  if (closest_keyframe_idx < 0) {
+    return;
+  }
+}
+
 void PoseGraphManager::detectLoopClosureByNNSearch() {
   if (!is_initialized_ || keyframes_.empty() || keyframes_.back().nnsearch_processed_) {
     return;
