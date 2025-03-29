@@ -4,7 +4,12 @@ using namespace kiss_matcher;
 
 PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
     : rclcpp::Node("km_sam", options) {
-  double loop_pub_hz, loop_update_hz, map_update_hz, vis_hz;
+  double loop_pub_hz;
+  double loop_detector_hz;
+  double loop_nnsearch_hz;
+  double map_update_hz;
+  double vis_hz;
+
   LoopClosureConfig lc_config;
   LoopDetectorConfig ld_config;
   auto &gc = lc_config.gicp_config_;
@@ -13,7 +18,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   map_frame_             = declare_parameter<std::string>("map_frame", "map");
   base_frame_            = declare_parameter<std::string>("base_frame", "base");
   loop_pub_hz            = declare_parameter<double>("loop_pub_hz", 0.1);
-  loop_update_hz         = declare_parameter<double>("loop_update_hz", 1.0);
+  loop_detector_hz       = declare_parameter<double>("loop_detector_hz", 1.0);
+  loop_nnsearch_hz       = declare_parameter<double>("loop_nnsearch_hz", 1.0);
   loop_pub_delayed_time_ = declare_parameter<double>("loop_pub_delayed_time", 60.0);
   map_update_hz          = declare_parameter<double>("map_update_hz", 0.2);
   vis_hz                 = declare_parameter<double>("vis_hz", 0.5);
@@ -109,8 +115,12 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   map_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / map_update_hz),
                                        std::bind(&PoseGraphManager::buildMap, this));
 
-  loop_timer_ =
-      this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_update_hz),
+  loop_detector_timer_ =
+      this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_detector_hz),
+                              std::bind(&PoseGraphManager::detectLoopClosureByLoopDetector, this));
+
+  loop_nnsearch_timer_ =
+      this->create_wall_timer(std::chrono::duration<double>(1.0 / loop_nnsearch_hz),
                               std::bind(&PoseGraphManager::detectLoopClosureByNNSearch, this));
 
   vis_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),

@@ -85,6 +85,7 @@ class PoseGraphManager : public rclcpp::Node {
   /**** Timer functions ****/
   // void loopPubTimerFunc();
   void buildMap();
+  void detectLoopClosureByLoopDetector();
   void detectLoopClosureByNNSearch();
   void publishVisualization();
 
@@ -168,7 +169,8 @@ class PoseGraphManager : public rclcpp::Node {
   // timers
   rclcpp::TimerBase::SharedPtr hydra_loop_timer_;
   rclcpp::TimerBase::SharedPtr map_timer_;
-  rclcpp::TimerBase::SharedPtr loop_timer_;
+  rclcpp::TimerBase::SharedPtr loop_detector_timer_;
+  rclcpp::TimerBase::SharedPtr loop_nnsearch_timer_;
   rclcpp::TimerBase::SharedPtr vis_timer_;
 };
 
