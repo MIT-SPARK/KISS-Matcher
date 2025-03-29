@@ -8,7 +8,8 @@
     map_frame: "map"                 # Global map frame ID
     base_frame: "base"               # Robot's base frame ID
     loop_pub_hz: 0.1                 # Frequency to publish loop closures (Hz)
-    loop_update_hz: 2.0              # Frequency to update loop detection (Hz)
+    loop_detector_hz: 2.0            # Frequency to update loop by external loop detector (Hz)
+    loop_nnsearch_hz: 1.0            # Frequency to update loop by nearest neighbor search (Hz)
     loop_pub_delayed_time: 30.0      # Delay before publishing loop closure results (sec)
     map_update_hz: 0.2               # Frequency to update the map (Hz)
     vis_hz: 1.0                      # Visualization update frequency (Hz)
