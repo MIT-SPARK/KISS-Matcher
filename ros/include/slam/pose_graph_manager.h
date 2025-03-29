@@ -77,14 +77,15 @@ class PoseGraphManager : public rclcpp::Node {
 
   void callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
                     const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg);
-  void saveFlagCallback(const std_msgs::msg::String::ConstSharedPtr &msg);
   /**** Timer functions ****/
   // void loopPubTimerFunc();
   void buildMap();
   void detectLoopClosureByLoopDetector();
   void detectLoopClosureByNNSearch();
 
-  void visualizeCurrentData();
+  void visualizeCurrentData(const Eigen::Matrix4d &lastest_odom,
+                            const rclcpp::Time &timestamp,
+                            const std::string &frame_id);
   void visualizePoseGraph();
 
   visualization_msgs::msg::Marker visualizeLoopMarkers(const gtsam::Values &corrected_poses) const;
@@ -93,6 +94,8 @@ class PoseGraphManager : public rclcpp::Node {
 
   bool checkIfKeyframe(const kiss_matcher::PoseGraphNode &pose_pcd_in,
                        const kiss_matcher::PoseGraphNode &latest_pose_pcd);
+
+  void saveFlagCallback(const std_msgs::msg::String::ConstSharedPtr &msg);
 
   std::string map_frame_;
   std::string base_frame_;
