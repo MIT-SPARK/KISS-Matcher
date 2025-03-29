@@ -152,7 +152,7 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
 
   const size_t num_inliers = global_reg_handler_->getNumFinalInliers();
   if (config_.verbose_) {
-    if (num_inliers > config_.gicp_config_.overlap_threshold_) {
+    if (num_inliers > config_.num_inliers_threshold_) {
       RCLCPP_INFO(logger_,
                   "\033[1;32m# final inliers: %lu > %lu\033[0m",
                   num_inliers,
@@ -163,11 +163,9 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
     }
   }
 
-  if (config_.verbose_) {
-    RCLCPP_INFO(logger_, "# of final inliers: %lu", global_reg_handler_->getNumFinalInliers());
-  }
-
-  if (!solution.valid) {
+  // NOTE(hlim): A small number of inliers suggests that the initial alignment may have failed,
+  // so fine alignment is meaningless.
+  if (!solution.valid || num_inliers < config_.num_inliers_threshold_) {
     return reg_output;
   } else {
     *coarse_aligned_        = transformPcd(src, coarse_alignment);
