@@ -100,8 +100,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   sub_scan_ =
       std::make_shared<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>>(this, "/cloud");
 
-  sub_node_ = std::make_shared<message_filters::Synchronizer<odom_pcd_sync_pol>>(
-      odom_pcd_sync_pol(10), *sub_odom_, *sub_scan_);
+  sub_node_ = std::make_shared<message_filters::Synchronizer<NodeSyncPolicy>>(
+      NodeSyncPolicy(10), *sub_odom_, *sub_scan_);
   sub_node_->registerCallback(std::bind(
       &PoseGraphManager::callbackNode, this, std::placeholders::_1, std::placeholders::_2));
 
@@ -170,14 +170,14 @@ void PoseGraphManager::appendKeyframePose(const PoseGraphNode &node) {
 }
 
 void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
-                                    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg) {
+                                    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &scan_msg) {
   Eigen::Matrix4d lastest_odom = current_frame_.pose_;
-  current_frame_               = PoseGraphNode(*odom_msg, *pcd_msg, current_keyframe_idx_);
+  current_frame_               = PoseGraphNode(*odom_msg, *scan_msg, current_keyframe_idx_);
 
   kiss_matcher::TicToc total_timer;
   kiss_matcher::TicToc local_timer;
 
-  visualizeCurrentData(lastest_odom, odom_msg->header.stamp, pcd_msg->header.frame_id);
+  visualizeCurrentData(lastest_odom, odom_msg->header.stamp, scan_msg->header.frame_id);
 
   if (!is_initialized_) {
     keyframes_.push_back(current_frame_);
@@ -541,10 +541,10 @@ visualization_msgs::msg::Marker PoseGraphManager::visualizeLoopDetectionRadius(
   return sphere;
 }
 
-bool PoseGraphManager::checkIfKeyframe(const PoseGraphNode &pose_pcd_in,
-                                       const PoseGraphNode &latest_pose_pcd) {
-  return keyframe_thr_ < (latest_pose_pcd.pose_corrected_.block<3, 1>(0, 3) -
-                          pose_pcd_in.pose_corrected_.block<3, 1>(0, 3))
+bool PoseGraphManager::checkIfKeyframe(const PoseGraphNode &query_node,
+                                       const PoseGraphNode &latest_node) {
+  return keyframe_thr_ < (latest_node.pose_corrected_.block<3, 1>(0, 3) -
+                          query_node.pose_corrected_.block<3, 1>(0, 3))
                              .norm();
 }
 

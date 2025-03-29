@@ -64,7 +64,7 @@ namespace fs = std::filesystem;
 using namespace std::chrono;
 typedef message_filters::sync_policies::ApproximateTime<nav_msgs::msg::Odometry,
                                                         sensor_msgs::msg::PointCloud2>
-    odom_pcd_sync_pol;
+    NodeSyncPolicy;
 
 class PoseGraphManager : public rclcpp::Node {
  public:
@@ -76,7 +76,7 @@ class PoseGraphManager : public rclcpp::Node {
   void appendKeyframePose(const kiss_matcher::PoseGraphNode &node);
 
   void callbackNode(const nav_msgs::msg::Odometry::ConstSharedPtr &odom_msg,
-                    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &pcd_msg);
+                    const sensor_msgs::msg::PointCloud2::ConstSharedPtr &scan_msg);
   /**** Timer functions ****/
   // void loopPubTimerFunc();
   void buildMap();
@@ -92,8 +92,8 @@ class PoseGraphManager : public rclcpp::Node {
   visualization_msgs::msg::Marker visualizeLoopDetectionRadius(
       const geometry_msgs::msg::Point &latest_position) const;
 
-  bool checkIfKeyframe(const kiss_matcher::PoseGraphNode &pose_pcd_in,
-                       const kiss_matcher::PoseGraphNode &latest_pose_pcd);
+  bool checkIfKeyframe(const kiss_matcher::PoseGraphNode &query_node,
+                       const kiss_matcher::PoseGraphNode &latest_node);
 
   void saveFlagCallback(const std_msgs::msg::String::ConstSharedPtr &msg);
 
@@ -174,7 +174,7 @@ class PoseGraphManager : public rclcpp::Node {
   // message_filters
   std::shared_ptr<message_filters::Subscriber<nav_msgs::msg::Odometry>> sub_odom_;
   std::shared_ptr<message_filters::Subscriber<sensor_msgs::msg::PointCloud2>> sub_scan_;
-  std::shared_ptr<message_filters::Synchronizer<odom_pcd_sync_pol>> sub_node_;
+  std::shared_ptr<message_filters::Synchronizer<NodeSyncPolicy>> sub_node_;
 
   // Timers
   rclcpp::TimerBase::SharedPtr hydra_loop_timer_;
