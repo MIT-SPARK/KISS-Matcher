@@ -27,6 +27,18 @@ LoopClosure::LoopClosure(const LoopClosureConfig &config, const rclcpp::Logger &
 
 LoopClosure::~LoopClosure() {}
 
+// NOTE(hlim): In outdoor scenes, loop closure sometimes fails due to Z-axis drift.
+// To address this, we use the is_multilayer_env_ parameter.
+// If true, full 3D distance (including Z) is considered for loop detection.
+// If false, we ignore Z and compute distance on the XY plane only.
+double LoopClosure::calculateDistance(const Eigen::Matrix4d &pose1, const Eigen::Matrix4d &pose2) {
+  if (config_.is_multilayer_env_) {
+    return (pose1.block<3, 1>(0, 3) - pose2.block<3, 1>(0, 3)).norm();
+  } else {
+    return (pose1.block<2, 1>(0, 3) - pose2.block<2, 1>(0, 3)).norm();
+  }
+}
+
 LoopCandidate LoopClosure::fetchClosestKeyframeIdx(const PoseGraphNode &front_keyframe,
                                                    const std::vector<PoseGraphNode> &keyframes) {
   const auto &loop_det_radi      = config_.loop_detection_radius_;
@@ -35,10 +47,8 @@ LoopCandidate LoopClosure::fetchClosestKeyframeIdx(const PoseGraphNode &front_ke
   LoopCandidate candidate;
 
   for (size_t idx = 0; idx < keyframes.size() - 1; ++idx) {
-    // check if potential loop: close enough in distance, far enough in time
-    double dist = (keyframes[idx].pose_corrected_.block<3, 1>(0, 3) -
-                   front_keyframe.pose_corrected_.block<3, 1>(0, 3))
-                      .norm();
+    const double dist =
+        calculateDistance(keyframes[idx].pose_corrected_, front_keyframe.pose_corrected_);
     if (loop_det_radi > dist &&
         loop_det_tdiff_thr < (front_keyframe.timestamp_ - keyframes[idx].timestamp_)) {
       if (dist < candidate.distance_) {

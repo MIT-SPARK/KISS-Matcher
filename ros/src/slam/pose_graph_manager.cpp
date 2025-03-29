@@ -31,6 +31,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   keyframe_thr_                    = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
   lc_config.num_submap_keyframes_  = declare_parameter<int>("keyframe.num_submap_keyframes", 5);
   lc_config.verbose_               = declare_parameter<bool>("loop.verbose", false);
+  lc_config.is_multilayer_env_     = declare_parameter<bool>("loop.is_multilayer_env", false);
   lc_config.loop_detection_radius_ = declare_parameter<double>("loop.loop_detection_radius", 15.0);
   lc_config.loop_detection_timediff_threshold_ =
       declare_parameter<double>("loop.loop_detection_timediff_threshold", 10.0);

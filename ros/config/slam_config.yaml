@@ -28,6 +28,9 @@
 
     loop:
       verbose: true                  # Enable verbose output
+      # If true, Z-axis differences are considered in loop detection.
+      # If false, loop detection assumes the robot moves mainly on a single horizontal plane.
+      is_multilayer_env: false                # ⭐ Whether the robot operates in a multilayer environment
       # NOTE(hlim): You may need to tune `loop_detection_radius` and `loop_detection_timediff_threshold` for your environment
       # after checking the Loop closure radius marker in Rviz.
       loop_detection_radius: 20.0             # ⭐ [Unit: m] Radius for detecting loop candidates.
