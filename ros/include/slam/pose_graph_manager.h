@@ -112,10 +112,12 @@ class PoseGraphManager : public rclcpp::Node {
   kiss_matcher::PoseGraphNode current_frame_;
   std::vector<kiss_matcher::PoseGraphNode> keyframes_;
 
-  bool is_initialized_                        = false;
-  bool loop_added_flag_                       = false;
-  bool loop_added_flag_map_                   = false;
-  bool loop_added_flag_vis_                   = false;
+  bool is_initialized_        = false;
+  bool loop_closure_added_    = false;
+  bool need_map_update_       = false;
+  bool need_graph_vis_update_ = false;
+  bool need_reg_vis_update_   = false;
+
   std::shared_ptr<gtsam::ISAM2> isam_handler_ = nullptr;
   gtsam::NonlinearFactorGraph gtsam_graph_;
   gtsam::Values init_esti_;

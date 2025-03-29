@@ -231,7 +231,7 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
         std::lock_guard<std::mutex> lock(graph_mutex_);
         isam_handler_->update(gtsam_graph_, init_esti_);
         isam_handler_->update();
-        if (loop_added_flag_) {
+        if (loop_closure_added_) {
           isam_handler_->update();
           isam_handler_->update();
           isam_handler_->update();
@@ -248,12 +248,12 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
             gtsamToEigen(corrected_esti_.at<gtsam::Pose3>(corrected_esti_.size() - 1));
         odom_delta_ = Eigen::Matrix4d::Identity();
       }
-      if (loop_added_flag_) {
+      if (loop_closure_added_) {
         std::lock_guard<std::mutex> lock(keyframes_mutex_);
         for (size_t i = 0; i < corrected_esti_.size(); ++i) {
           keyframes_[i].pose_corrected_ = gtsamToEigen(corrected_esti_.at<gtsam::Pose3>(i));
         }
-        loop_added_flag_ = false;
+        loop_closure_added_ = false;
       }
 
       const auto t_total = total_timer.toc();
@@ -291,7 +291,7 @@ void PoseGraphManager::buildMap() {
   if (map_pub_->get_subscription_count() > 0) {
     {
       std::lock_guard<std::mutex> lock(keyframes_mutex_);
-      if (loop_added_flag_map_) {
+      if (need_map_update_) {
         map_cloud_->clear();
         start_idx = 0;
       }
@@ -314,8 +314,8 @@ void PoseGraphManager::buildMap() {
     map_pub_->publish(toROSMsg(*voxelized_map, map_frame_));
   }
 
-  if (loop_added_flag_map_) {
-    loop_added_flag_map_ = false;
+  if (need_map_update_) {
+    need_map_update_ = false;
   }
 }
 
@@ -369,9 +369,9 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
     }
 
     loop_idx_pairs_.push_back({query.idx_, loop_candidate.idx_});
-    loop_added_flag_     = true;
-    loop_added_flag_map_ = true;
-    loop_added_flag_vis_ = true;
+    loop_closure_added_    = true;
+    need_map_update_       = true;
+    need_graph_vis_update_ = true;
 
     // --------------------------------------------------
     // TODO(hlim): resurrect pose_graph_tools_msgs
@@ -452,7 +452,7 @@ void PoseGraphManager::visualizePoseGraph() {
     return;
   }
 
-  if (loop_added_flag_vis_) {
+  if (need_graph_vis_update_) {
     gtsam::Values corrected_esti_copied;
     pcl::PointCloud<pcl::PointXYZ> corrected_odoms;
     nav_msgs::msg::Path corrected_path;
@@ -476,7 +476,7 @@ void PoseGraphManager::visualizePoseGraph() {
       corrected_odoms_      = corrected_odoms;
       corrected_path_.poses = corrected_path.poses;
     }
-    loop_added_flag_vis_ = false;
+    need_graph_vis_update_ = false;
   }
 
   {
