@@ -113,7 +113,8 @@ class PoseGraphManager : public rclcpp::Node {
   gtsam::Values corrected_esti_;
 
   double keyframe_thr_;
-  double voxel_res_;
+  double map_voxel_res_;
+  double save_voxel_res_;
   double loop_pub_delayed_time_;
   double loop_detection_radius_;  // Only for visualization
   int sub_key_num_;

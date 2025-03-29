@@ -18,7 +18,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   vis_hz                 = declare_parameter<double>("vis_hz", 0.5);
 
   lc_config.voxel_res_             = declare_parameter<double>("voxel_resolution", 0.3);
-  voxel_res_                       = declare_parameter<double>("save_voxel_resolution", 0.3);
+  map_voxel_res_                   = declare_parameter<double>("map_voxel_resolution", 1.0);
+  save_voxel_res_                  = declare_parameter<double>("save_voxel_resolution", 0.3);
   keyframe_thr_                    = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
   lc_config.num_submap_keyframes_  = declare_parameter<int>("keyframe.num_submap_keyframes", 5);
   lc_config.verbose_               = declare_parameter<bool>("loop.verbose", false);
@@ -282,7 +283,7 @@ void PoseGraphManager::buildMap() {
       start_idx = keyframes_.size();
     }
 
-    const auto &voxelized_map = voxelize(map_cloud_, voxel_res_);
+    const auto &voxelized_map = voxelize(map_cloud_, map_voxel_res_);
     map_pub_->publish(pclToPclRos(*voxelized_map, map_frame_));
   }
 
@@ -472,7 +473,7 @@ void PoseGraphManager::saveFlagCallback(const std_msgs::msg::String::ConstShared
         *corrected_map += transformPcd(keyframes_[i].scan_, keyframes_[i].pose_corrected_);
       }
     }
-    const auto &voxelized_map = voxelize(corrected_map, voxel_res_);
+    const auto &voxelized_map = voxelize(corrected_map, save_voxel_res_);
     pcl::io::savePCDFileASCII<PointType>(seq_directory + "/" + seq_name_ + "_map.pcd",
                                          *voxelized_map);
     RCLCPP_INFO(this->get_logger(), "Accumulated map cloud saved in .pcd format");
@@ -493,7 +494,7 @@ PoseGraphManager::~PoseGraphManager() {
         *corrected_map += transformPcd(keyframes_[i].scan_, keyframes_[i].pose_corrected_);
       }
     }
-    const auto &voxelized_map = voxelize(corrected_map, voxel_res_);
+    const auto &voxelized_map = voxelize(corrected_map, save_voxel_res_);
     pcl::io::savePCDFileASCII<PointType>(package_path_ + "/result.pcd", *voxelized_map);
     RCLCPP_INFO(this->get_logger(), "Result saved in .pcd format (Destructor).");
   }
