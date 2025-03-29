@@ -6,6 +6,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
     : rclcpp::Node("km_sam", options) {
   double loop_pub_hz, loop_update_hz, map_update_hz, vis_hz;
   LoopClosureConfig lc_config;
+  LoopDetectorConfig ld_config;
   auto &gc = lc_config.gicp_config_;
   auto &mc = lc_config.matcher_config_;
 
@@ -54,6 +55,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
 
   loop_closure_          = std::make_shared<LoopClosure>(lc_config, this->get_logger());
   loop_detection_radius_ = lc_config.loop_detection_radius_;
+
+  loop_detector_ = std::make_shared<LoopDetector>(ld_config, this->get_logger());
 
   gtsam::ISAM2Params isam_params_;
   isam_params_.relinearizeThreshold = 0.01;

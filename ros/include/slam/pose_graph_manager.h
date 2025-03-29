@@ -53,6 +53,7 @@
 #include <gtsam/slam/PriorFactor.h>
 
 #include "slam/loop_closure.h"
+#include "slam/loop_detector.h"
 #include "slam/pose_graph_node.hpp"
 #include "slam/utils.hpp"
 
@@ -133,6 +134,10 @@ class PoseGraphManager : public rclcpp::Node {
 
   // Loop closure
   std::shared_ptr<kiss_matcher::LoopClosure> loop_closure_;
+
+  // NOTE(hlim): We do not provide a loop detector implementation directly,
+  // but you can plug in your own detector via this interface.
+  std::shared_ptr<kiss_matcher::LoopDetector> loop_detector_;
 
   pcl::PointCloud<PointType>::Ptr map_cloud_;
 
