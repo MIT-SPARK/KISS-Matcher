@@ -127,6 +127,14 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   vis_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),
                                        std::bind(&PoseGraphManager::publishVisualization, this));
 
+  if (!lc_config.is_multilayer_env_) {
+    RCLCPP_WARN(
+        get_logger(),
+        "'loop.is_multilayer_env' is set to `false`. "
+        "This setting is recommended for outdoor environments to reduce the effect of Z-drift. "
+        "However, if you're running SLAM in an indoor multi-layer environment, "
+        "consider setting it to true to enable full 3D NN search for loop candidates.");
+  }
   RCLCPP_INFO(this->get_logger(), "Main class, starting node...");
 }
 
