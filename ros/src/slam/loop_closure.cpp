@@ -39,7 +39,7 @@ double LoopClosure::calculateDistance(const Eigen::Matrix4d &pose1, const Eigen:
   }
 }
 
-LoopCandidate LoopClosure::fetchClosestKeyframeIdx(const PoseGraphNode &front_keyframe,
+LoopCandidate LoopClosure::fetchClosestKeyframeIdx(const PoseGraphNode &query_frame,
                                                    const std::vector<PoseGraphNode> &keyframes) {
   const auto &loop_det_radi      = config_.loop_detection_radius_;
   const auto &loop_det_tdiff_thr = config_.loop_detection_timediff_threshold_;
@@ -48,9 +48,9 @@ LoopCandidate LoopClosure::fetchClosestKeyframeIdx(const PoseGraphNode &front_ke
 
   for (size_t idx = 0; idx < keyframes.size() - 1; ++idx) {
     const double dist =
-        calculateDistance(keyframes[idx].pose_corrected_, front_keyframe.pose_corrected_);
+        calculateDistance(keyframes[idx].pose_corrected_, query_frame.pose_corrected_);
     if (loop_det_radi > dist &&
-        loop_det_tdiff_thr < (front_keyframe.timestamp_ - keyframes[idx].timestamp_)) {
+        loop_det_tdiff_thr < (query_frame.timestamp_ - keyframes[idx].timestamp_)) {
       if (dist < candidate.distance_) {
         candidate.found_    = true;
         candidate.distance_ = dist;
