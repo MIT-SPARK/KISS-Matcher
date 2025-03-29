@@ -125,7 +125,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
                               std::bind(&PoseGraphManager::detectLoopClosureByNNSearch, this));
 
   vis_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),
-                                       std::bind(&PoseGraphManager::publishVisualization, this));
+                                       std::bind(&PoseGraphManager::visualizePoseGraph, this));
 
   if (!lc_config.is_multilayer_env_) {
     RCLCPP_WARN(
@@ -404,7 +404,7 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
   RCLCPP_INFO(this->get_logger(), "Loop closure: %.1fmsec", lc_timer.toc());
 }
 
-void PoseGraphManager::publishVisualization() {
+void PoseGraphManager::visualizePoseGraph() {
   if (!is_initialized_) {
     return;
   }

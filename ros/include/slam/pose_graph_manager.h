@@ -88,7 +88,7 @@ class PoseGraphManager : public rclcpp::Node {
   void buildMap();
   void detectLoopClosureByLoopDetector();
   void detectLoopClosureByNNSearch();
-  void publishVisualization();
+  void visualizePoseGraph();
 
   std::string map_frame_;
   std::string base_frame_;
