@@ -113,6 +113,7 @@ class PoseGraphManager : public rclcpp::Node {
   gtsam::Values corrected_esti_;
 
   double keyframe_thr_;
+  double scan_voxel_res_;
   double map_voxel_res_;
   double save_voxel_res_;
   double loop_pub_delayed_time_;

@@ -18,6 +18,7 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
   vis_hz                 = declare_parameter<double>("vis_hz", 0.5);
 
   lc_config.voxel_res_             = declare_parameter<double>("voxel_resolution", 0.3);
+  scan_voxel_res_                  = lc_config.voxel_res_;
   map_voxel_res_                   = declare_parameter<double>("map_voxel_resolution", 1.0);
   save_voxel_res_                  = declare_parameter<double>("save_voxel_resolution", 0.3);
   keyframe_thr_                    = declare_parameter<double>("keyframe.keyframe_threshold", 1.0);
@@ -277,8 +278,13 @@ void PoseGraphManager::buildMap() {
 
       if (keyframes_.empty()) return;
 
+      // NOTE(hlim): Building the full map causes RViz delay when keyframes > 500.
+      // Since the map is for visualization only, we apply a heuristic to reduce cost.
       for (size_t i = start_idx; i < keyframes_.size(); ++i) {
-        *map_cloud_ += transformPcd(keyframes_[i].scan_, keyframes_[i].pose_corrected_);
+        if (keyframes_[i].voxelized_scan_.empty()) {
+          keyframes_[i].voxelized_scan_ = *voxelize(keyframes_[i].scan_, scan_voxel_res_);
+        }
+        *map_cloud_ += transformPcd(keyframes_[i].voxelized_scan_, keyframes_[i].pose_corrected_);
       }
 
       start_idx = keyframes_.size();

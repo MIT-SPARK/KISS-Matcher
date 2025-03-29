@@ -11,6 +11,7 @@ namespace kiss_matcher {
 
 struct PoseGraphNode {
   pcl::PointCloud<PointType> scan_;
+  pcl::PointCloud<PointType> voxelized_scan_;  // Used for map visualization
   Eigen::Matrix4d pose_           = Eigen::Matrix4d::Identity();
   Eigen::Matrix4d pose_corrected_ = Eigen::Matrix4d::Identity();
   double timestamp_;
