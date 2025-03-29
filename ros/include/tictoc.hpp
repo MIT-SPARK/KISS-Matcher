@@ -1,9 +1,10 @@
 #pragma once
 
 #include <chrono>
-#include <stdexcept>  // for std::invalid_argument
+#include <stdexcept>
 #include <string>
 
+namespace kiss_matcher {
 class TicToc {
  public:
   TicToc() { tic(); }
@@ -28,3 +29,4 @@ class TicToc {
  private:
   std::chrono::time_point<std::chrono::steady_clock> start_;
 };
+}  // namespace kiss_matcher
