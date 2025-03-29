@@ -215,7 +215,6 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
       }
 
       current_keyframe_idx_++;
-      RCLCPP_INFO(this->get_logger(), "%d-th node comes.", current_keyframe_idx_);
       {
         std::lock_guard<std::mutex> lock(vis_mutex_);
         updateOdomsAndPaths(current_frame_);
