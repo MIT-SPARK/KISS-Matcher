@@ -241,5 +241,3 @@ pcl::PointCloud<PointType> LoopClosure::getCoarseAlignedCloud() { return *coarse
 pcl::PointCloud<PointType> LoopClosure::getFinalAlignedCloud() { return *aligned_; }
 
 pcl::PointCloud<PointType> LoopClosure::getDebugCloud() { return *debug_cloud_; }
-
-int LoopClosure::getClosestKeyframeidx() { return closest_keyframe_idx_; }
