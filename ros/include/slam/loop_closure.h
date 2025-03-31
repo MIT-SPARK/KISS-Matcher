@@ -64,7 +64,6 @@ class LoopClosure {
   std::shared_ptr<kiss_matcher::KISSMatcher> global_reg_handler_                        = nullptr;
   std::shared_ptr<small_gicp::RegistrationPCL<PointType, PointType>> local_reg_handler_ = nullptr;
 
-  int closest_keyframe_idx_ = -1;
   pcl::PointCloud<PointType>::Ptr src_cloud_;
   pcl::PointCloud<PointType>::Ptr tgt_cloud_;
   pcl::PointCloud<PointType>::Ptr coarse_aligned_;
