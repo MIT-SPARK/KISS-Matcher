@@ -357,6 +357,7 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
 
   const RegOutput &reg_output =
       loop_closure_->performLoopClosure(query, keyframes_, loop_candidate.idx_);
+  need_lc_cloud_vis_update_ = true;
 
   if (reg_output.is_valid_) {
     RCLCPP_INFO(this->get_logger(), "LC accepted. Overlapness: %.3f", reg_output.overlapness_);
@@ -375,10 +376,9 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
     }
 
     loop_idx_pairs_.push_back({query.idx_, loop_candidate.idx_});
-    loop_closure_added_       = true;
-    need_map_update_          = true;
-    need_graph_vis_update_    = true;
-    need_lc_cloud_vis_update_ = true;
+    loop_closure_added_    = true;
+    need_map_update_       = true;
+    need_graph_vis_update_ = true;
 
     // --------------------------------------------------
     // TODO(hlim): resurrect pose_graph_tools_msgs
