@@ -1,7 +1,7 @@
 #pragma once
 
-#ifndef KISS_MATCHER_LOOP_CANDIDATE_H
-#define KISS_MATCHER_LOOP_CANDIDATE_H
+#ifndef KISS_MATCHER_LOOP_TYPES_H
+#define KISS_MATCHER_LOOP_TYPES_H
 
 #include <cstddef>  // for size_t
 #include <limits>   // for std::numeric_limits
@@ -20,4 +20,4 @@ using LoopIdxPair = std::pair<size_t, size_t>;
 
 using LoopIdxPairs = std::vector<LoopIdxPair>;
 
-#endif  // KISS_MATCHER_LOOP_CANDIDATE_H
+#endif  // KISS_MATCHER_LOOP_TYPES_H

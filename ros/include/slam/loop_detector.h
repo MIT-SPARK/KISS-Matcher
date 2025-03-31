@@ -19,7 +19,7 @@
 #include <small_gicp/pcl/pcl_registration.hpp>
 
 #include "rclcpp/rclcpp.hpp"
-#include "slam/loop_candidate.hpp"
+#include "slam/loop_types.hpp"
 #include "slam/pose_graph_node.hpp"
 #include "slam/utils.hpp"
 
