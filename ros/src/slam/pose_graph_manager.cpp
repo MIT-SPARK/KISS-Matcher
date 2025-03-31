@@ -345,27 +345,34 @@ void PoseGraphManager::detectLoopClosureByLoopDetector() {
 }
 
 void PoseGraphManager::detectLoopClosureByNNSearch() {
-  kiss_matcher::TicToc lc_timer;
-
   auto &query = keyframes_.back();
   if (!is_initialized_ || keyframes_.empty() || query.nnsearch_processed_) {
     return;
   }
   query.nnsearch_processed_ = true;
 
-  const auto &loop_candidate = loop_closure_->fetchClosestCandidate(query, keyframes_);
-  if (!loop_candidate.found_) {
+  const auto &loop_idx_pairs = loop_closure_->fetchLoopCandidates(query, keyframes_);
+
+  for (const auto &loop_candidate : loop_idx_pairs) {
+    loop_idx_pair_queue_.push(loop_candidate);
+  }
+}
+
+void PoseGraphManager::performRegistration() {
+  kiss_matcher::TicToc reg_timer;
+  if (loop_idx_pair_queue_.empty()) {
     return;
   }
+  const auto [query_idx, match_idx] = loop_idx_pair_queue_.front();
+  loop_idx_pair_queue_.pop();
 
-  const RegOutput &reg_output =
-      loop_closure_->performLoopClosure(query, keyframes_, loop_candidate.idx_);
-  need_lc_cloud_vis_update_ = true;
+  const RegOutput &reg_output = loop_closure_->performLoopClosure(keyframes_, query_idx, match_idx);
+  need_lc_cloud_vis_update_   = true;
 
   if (reg_output.is_valid_) {
     RCLCPP_INFO(this->get_logger(), "LC accepted. Overlapness: %.3f", reg_output.overlapness_);
-    gtsam::Pose3 pose_from = eigenToGtsam(reg_output.pose_ * query.pose_corrected_);
-    gtsam::Pose3 pose_to   = eigenToGtsam(keyframes_[loop_candidate.idx_].pose_corrected_);
+    gtsam::Pose3 pose_from = eigenToGtsam(reg_output.pose_ * keyframes_[query_idx].pose_corrected_);
+    gtsam::Pose3 pose_to   = eigenToGtsam(keyframes_[match_idx].pose_corrected_);
 
     // TODO(hlim): Parameterize
     auto variance_vector = (gtsam::Vector(6) << 1e-4, 1e-4, 1e-4, 1e-2, 1e-2, 1e-2).finished();
@@ -375,10 +382,10 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
     {
       std::lock_guard<std::mutex> lock(graph_mutex_);
       gtsam_graph_.add(gtsam::BetweenFactor<gtsam::Pose3>(
-          query.idx_, loop_candidate.idx_, pose_from.between(pose_to), loop_noise));
+          query_idx, match_idx, pose_from.between(pose_to), loop_noise));
     }
 
-    vis_loop_edges_.push_back({query.idx_, loop_candidate.idx_});
+    vis_loop_edges_.emplace_back(query_idx, match_idx);
     loop_closure_added_    = true;
     need_map_update_       = true;
     need_graph_vis_update_ = true;
@@ -402,7 +409,6 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
     // loop_msgs_.edges.emplace_back(edge);
     // last_lc_time_ = this->now().seconds();
     // --------------------------------------------------
-
   } else {
     if (reg_output.overlapness_ == 0.0) {
       RCLCPP_WARN(this->get_logger(), "LC rejected. KISS-Matcher failed");
@@ -410,7 +416,7 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
       RCLCPP_WARN(this->get_logger(), "LC rejected. Overlapness: %.3f", reg_output.overlapness_);
     }
   }
-  RCLCPP_INFO(this->get_logger(), "Loop closure: %.1f msec", lc_timer.toc());
+  RCLCPP_INFO(this->get_logger(), "Reg: %.1f msec", reg_timer.toc());
 }
 
 void PoseGraphManager::visualizeCurrentData(const Eigen::Matrix4d &lastest_odom,
