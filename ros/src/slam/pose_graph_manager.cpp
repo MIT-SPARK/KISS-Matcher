@@ -375,7 +375,7 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
           query.idx_, loop_candidate.idx_, pose_from.between(pose_to), loop_noise));
     }
 
-    loop_idx_pairs_.push_back({query.idx_, loop_candidate.idx_});
+    vis_loop_edges_.push_back({query.idx_, loop_candidate.idx_});
     loop_closure_added_    = true;
     need_map_update_       = true;
     need_graph_vis_update_ = true;
@@ -468,7 +468,7 @@ void PoseGraphManager::visualizePoseGraph() {
 
       corrected_path.poses.push_back(gtsamToPoseStamped(pose_, map_frame_));
     }
-    if (!loop_idx_pairs_.empty()) {
+    if (!vis_loop_edges_.empty()) {
       loop_detection_pub_->publish(visualizeLoopMarkers(corrected_esti_copied));
     }
     {
@@ -511,13 +511,13 @@ visualization_msgs::msg::Marker PoseGraphManager::visualizeLoopMarkers(
   edges.color.b            = 1.0f;
   edges.color.a            = 1.0f;
 
-  for (size_t i = 0; i < loop_idx_pairs_.size(); ++i) {
-    if (loop_idx_pairs_[i].first >= corrected_poses.size() ||
-        loop_idx_pairs_[i].second >= corrected_poses.size()) {
+  for (size_t i = 0; i < vis_loop_edges_.size(); ++i) {
+    if (vis_loop_edges_[i].first >= corrected_poses.size() ||
+        vis_loop_edges_[i].second >= corrected_poses.size()) {
       continue;
     }
-    gtsam::Pose3 pose  = corrected_poses.at<gtsam::Pose3>(loop_idx_pairs_[i].first);
-    gtsam::Pose3 pose2 = corrected_poses.at<gtsam::Pose3>(loop_idx_pairs_[i].second);
+    gtsam::Pose3 pose  = corrected_poses.at<gtsam::Pose3>(vis_loop_edges_[i].first);
+    gtsam::Pose3 pose2 = corrected_poses.at<gtsam::Pose3>(vis_loop_edges_[i].second);
 
     geometry_msgs::msg::Point p, p2;
     p.x  = pose.translation().x();

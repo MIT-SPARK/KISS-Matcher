@@ -131,7 +131,8 @@ class PoseGraphManager : public rclcpp::Node {
   double loop_pub_delayed_time_;
   double loop_detection_radius_;  // Only for visualization
   int sub_key_num_;
-  std::vector<std::pair<size_t, size_t>> loop_idx_pairs_;
+
+  std::vector<std::pair<size_t, size_t>> vis_loop_edges_;
   // pose_graph_tools_msgs::msg::PoseGraph loop_msgs_;
 
   kiss_matcher::TicToc timer_;
