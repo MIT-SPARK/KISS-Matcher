@@ -336,9 +336,10 @@ void PoseGraphManager::detectLoopClosureByLoopDetector() {
   query.loop_detector_processed_ = true;
 
   kiss_matcher::TicToc ld_timer;
-  const auto &loop_candidate = loop_detector_->fetchLoopCandidate(query, keyframes_);
-  if (!loop_candidate.found_) {
-    return;
+  const auto &loop_idx_pairs = loop_detector_->fetchLoopCandidates(query, keyframes_);
+
+  for (const auto &loop_candidate : loop_idx_pairs) {
+    loop_idx_pair_queue_.push(loop_candidate);
   }
 
   const auto t_ld = ld_timer.toc();
