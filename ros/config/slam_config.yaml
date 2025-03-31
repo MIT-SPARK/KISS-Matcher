@@ -24,7 +24,7 @@
       # Submap-to-submap registration is performed.
       # The main advantage of KISS-Matcher is its super-fast speed in submap matching!
       # see: https://arxiv.org/pdf/2409.15615
-      num_submap_keyframes: 11       # ⭐ > 0. Number of keyframes per submap. It should be an odd number
+      num_submap_keyframes: 1        # ⭐ > 0. Number of keyframes per submap. It should be an odd number
 
     loop:
       verbose: true                  # Enable verbose output
@@ -46,7 +46,7 @@
       # NOTE(hlim): The best value of `overlap_threshold` highly depends on `num_submap_keyframes`
       # Thus, heuristic tuning is required for the best performance.
       # Larger values make it more conservative (i.e., higher `overlap_threshold` enhances LC precision)
-      overlap_threshold: 65.0         # ⭐ [Unit: %] Threshold for the ratio of ICP inliers
+      overlap_threshold: 55.0         # ⭐ [Unit: %] Threshold for the ratio of ICP inliers
                                       # (i.e., the percentage of correspondences within `corr_dist`).
                                       # A value close to 100% means the source and target are nearly perfectly aligned.
                                       # In cases of partial overlap, this ratio can never reach 100%.
@@ -57,7 +57,7 @@
       # NOTE(hlim): The best value of `num_inliers_threshold` highly depends on `num_submap_keyframes`
       # Thus, heuristic tuning is required for the best performance.
       # Larger values make it more conservative (i.e., higher `num_inliers_threshold` enhances LC precision)
-      num_inliers_threshold: 100       # ⭐ Minimum inlier count to accept KISS-Matcher initial alignment
+      num_inliers_threshold: 50       # ⭐ Minimum inlier count to accept KISS-Matcher initial alignment
 
     result:
       save_map_pcd: false
