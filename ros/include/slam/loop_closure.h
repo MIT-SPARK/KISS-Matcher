@@ -81,8 +81,18 @@ class LoopClosure {
   explicit LoopClosure(const LoopClosureConfig &config, const rclcpp::Logger &logger);
   ~LoopClosure();
   double calculateDistance(const Eigen::Matrix4d &pose1, const Eigen::Matrix4d &pose2);
-  LoopCandidate fetchClosestCandidate(const PoseGraphNode &query_frame,
-                                      const std::vector<PoseGraphNode> &keyframes);
+  LoopCandidates getLoopCandidatesFromQuery(const PoseGraphNode &query_frame,
+                                            const std::vector<PoseGraphNode> &keyframes);
+
+  LoopCandidate getClosestCandidate(const LoopCandidates &candidates);
+
+  LoopIdxPairs fetchClosestLoopCandidate(const PoseGraphNode &query_frame,
+                                         const std::vector<PoseGraphNode> &keyframes);
+  LoopIdxPairs fetchLoopCandidates(const PoseGraphNode &query_frame,
+                                   const std::vector<PoseGraphNode> &keyframes,
+                                   const size_t num_max_candidates  = 3,
+                                   const double reliable_window_sec = 30);
+
   NodePair setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyframes,
                              const size_t src_idx,
                              const size_t tgt_idx,
@@ -95,9 +105,10 @@ class LoopClosure {
                                   const pcl::PointCloud<PointType> &tgt);
   RegOutput performLoopClosure(const PoseGraphNode &query_keyframe,
                                const std::vector<PoseGraphNode> &keyframes);
-  RegOutput performLoopClosure(const PoseGraphNode &query_keyframe,
-                               const std::vector<PoseGraphNode> &keyframes,
-                               const int closest_keyframe_idx);
+  RegOutput performLoopClosure(const std::vector<PoseGraphNode> &keyframes,
+                               const size_t query_idx,
+                               const size_t match_idx);
+
   pcl::PointCloud<PointType> getSourceCloud();
   pcl::PointCloud<PointType> getTargetCloud();
   pcl::PointCloud<PointType> getCoarseAlignedCloud();

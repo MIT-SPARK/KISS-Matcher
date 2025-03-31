@@ -39,26 +39,95 @@ double LoopClosure::calculateDistance(const Eigen::Matrix4d &pose1, const Eigen:
   }
 }
 
-LoopCandidate LoopClosure::fetchClosestCandidate(const PoseGraphNode &query_frame,
-                                                 const std::vector<PoseGraphNode> &keyframes) {
+LoopCandidates LoopClosure::getLoopCandidatesFromQuery(
+    const PoseGraphNode &query_frame,
+    const std::vector<PoseGraphNode> &keyframes) {
+  LoopCandidates candidates;
+  candidates.reserve(keyframes.size() / 100);  // heuristic: expect ~1% to be valid
+
   const auto &loop_det_radi      = config_.loop_detection_radius_;
   const auto &loop_det_tdiff_thr = config_.loop_detection_timediff_threshold_;
 
-  LoopCandidate candidate;
-
   for (size_t idx = 0; idx < keyframes.size() - 1; ++idx) {
-    const double dist =
-        calculateDistance(keyframes[idx].pose_corrected_, query_frame.pose_corrected_);
-    if (loop_det_radi > dist &&
-        loop_det_tdiff_thr < (query_frame.timestamp_ - keyframes[idx].timestamp_)) {
-      if (dist < candidate.distance_) {
-        candidate.found_    = true;
-        candidate.distance_ = dist;
-        candidate.idx_      = keyframes[idx].idx_;
-      }
+    double dist = calculateDistance(keyframes[idx].pose_corrected_, query_frame.pose_corrected_);
+    double time_diff = query_frame.timestamp_ - keyframes[idx].timestamp_;
+
+    if (dist < loop_det_radi && time_diff > loop_det_tdiff_thr) {
+      LoopCandidate c;
+      c.idx_      = keyframes[idx].idx_;
+      c.distance_ = dist;
+      c.found_    = true;
+      candidates.emplace_back(c);
     }
   }
-  return candidate;
+
+  return candidates;
+}
+
+LoopCandidate LoopClosure::getClosestCandidate(const LoopCandidates &candidates) {
+  if (candidates.empty()) return LoopCandidate();
+
+  return *std::min_element(
+      candidates.begin(), candidates.end(), [](const LoopCandidate &a, const LoopCandidate &b) {
+        return a.distance_ < b.distance_;
+      });
+}
+
+LoopIdxPairs LoopClosure::fetchClosestLoopCandidate(const PoseGraphNode &query_frame,
+                                                    const std::vector<PoseGraphNode> &keyframes) {
+  const auto &candidates = getLoopCandidatesFromQuery(query_frame, keyframes);
+  if (candidates.empty()) {
+    return {};
+  }
+
+  const auto &candidate = getClosestCandidate(candidates);
+  // NOTE(hlim): While it outputs a single index pair,
+  // for compatabiliy, I decided to use `LoopIdxPairs` instead of `LoopIdxPair`.
+  LoopIdxPairs idx_pairs;
+  idx_pairs.emplace_back(query_frame.idx_, candidate.idx_);
+  return idx_pairs;
+}
+
+LoopIdxPairs LoopClosure::fetchLoopCandidates(const PoseGraphNode &query_frame,
+                                              const std::vector<PoseGraphNode> &keyframes,
+                                              const size_t num_max_candidates,
+                                              const double reliable_window_sec) {
+  // Case A.
+  // If ICP was recently successful, it is highly likely that pose graph optimization (PGO)
+  // has corrected the poses. As a result, the nearest neighbor becomes a much more reliable
+  // loop candidate, and a single closest candidate is often sufficient.
+  if (has_success_icp_time_) {
+    auto now           = std::chrono::steady_clock::now();
+    double elapsed_sec = std::chrono::duration<double>(now - last_success_icp_time_).count();
+
+    if (elapsed_sec < reliable_window_sec) {
+      if (config_.verbose_) {
+        RCLCPP_INFO(logger_, "The nearest loop candidate is returned.");
+      }
+      return fetchClosestLoopCandidate(query_frame, keyframes);
+    }
+  }
+
+  // Case B.
+  // If no loop closure has occurred for a long time, the nearest neighbor is not always
+  // a valid loop candidate due to possible drift or noise.
+  // To mitigate this, we use random sampling to diversify the candidates.
+  LoopCandidates candidates = getLoopCandidatesFromQuery(query_frame, keyframes);
+  if (candidates.empty()) {
+    return {};
+  }
+
+  std::random_device rd;
+  std::mt19937 g(rd());
+  std::shuffle(candidates.begin(), candidates.end(), g);
+
+  LoopIdxPairs idx_pairs;
+  size_t num_selected = std::min(num_max_candidates, candidates.size());
+  for (size_t i = 0; i < num_selected; ++i) {
+    idx_pairs.emplace_back(query_frame.idx_, candidates[i].idx_);
+  }
+
+  return idx_pairs;
 }
 
 NodePair LoopClosure::setSrcAndTgtCloud(const std::vector<PoseGraphNode> &keyframes,
@@ -193,22 +262,22 @@ RegOutput LoopClosure::coarseToFineAlignment(const pcl::PointCloud<PointType> &s
 
 RegOutput LoopClosure::performLoopClosure(const PoseGraphNode &query_keyframe,
                                           const std::vector<PoseGraphNode> &keyframes) {
-  const auto &loop_candidate = fetchClosestCandidate(query_keyframe, keyframes);
-  if (!loop_candidate.found_) {
+  const auto &loop_candidate = fetchClosestLoopCandidate(query_keyframe, keyframes);
+  if (loop_candidate.empty()) {
     return RegOutput();
   }
-  return performLoopClosure(query_keyframe, keyframes, closest_keyframe_idx_);
+  const auto &[query_idx, match_idx] = loop_candidate[0];
+  return performLoopClosure(keyframes, query_idx, match_idx);
 }
 
-RegOutput LoopClosure::performLoopClosure(const PoseGraphNode &query_keyframe,
-                                          const std::vector<PoseGraphNode> &keyframes,
-                                          const int closest_keyframe_idx) {
+RegOutput LoopClosure::performLoopClosure(const std::vector<PoseGraphNode> &keyframes,
+                                          const size_t query_idx,
+                                          const size_t match_idx) {
   RegOutput reg_output;
-  closest_keyframe_idx_ = closest_keyframe_idx;
-  if (closest_keyframe_idx_ >= 0) {
+  if (match_idx >= 0) {
     const auto &[src_cloud, tgt_cloud] = setSrcAndTgtCloud(keyframes,
-                                                           query_keyframe.idx_,
-                                                           closest_keyframe_idx_,
+                                                           query_idx,
+                                                           match_idx,
                                                            config_.num_submap_keyframes_,
                                                            config_.voxel_res_,
                                                            config_.enable_global_registration_);
