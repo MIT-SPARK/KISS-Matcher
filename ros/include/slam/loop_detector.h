@@ -39,7 +39,7 @@ class LoopDetector {
  public:
   explicit LoopDetector(const LoopDetectorConfig &config, const rclcpp::Logger &logger);
   ~LoopDetector();
-  LoopCandidate fetchLoopCandidate(const PoseGraphNode &query_frame,
+  LoopIdxPairs fetchLoopCandidates(const PoseGraphNode &query_frame,
                                    const std::vector<PoseGraphNode> &keyframes);
 };
 }  // namespace kiss_matcher

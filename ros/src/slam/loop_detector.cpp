@@ -9,11 +9,11 @@ LoopDetector::LoopDetector(const LoopDetectorConfig &config, const rclcpp::Logge
 
 LoopDetector::~LoopDetector() {}
 
-LoopCandidate LoopDetector::fetchLoopCandidate(const PoseGraphNode &query_frame,
+LoopIdxPairs LoopDetector::fetchLoopCandidates(const PoseGraphNode &query_frame,
                                                const std::vector<PoseGraphNode> &keyframes) {
-  LoopCandidate candidate;
+  LoopIdxPairs loop_idx_pairs;
   //------------------------------------------------------------
   // Implement your loop detector here
   //------------------------------------------------------------
-  return candidate;
+  return loop_idx_pairs;
 }
