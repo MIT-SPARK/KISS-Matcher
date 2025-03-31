@@ -74,6 +74,9 @@ class LoopClosure {
 
   rclcpp::Logger logger_;
 
+  std::chrono::steady_clock::time_point last_success_icp_time_;
+  bool has_success_icp_time_ = false;
+
  public:
   explicit LoopClosure(const LoopClosureConfig &config, const rclcpp::Logger &logger);
   ~LoopClosure();

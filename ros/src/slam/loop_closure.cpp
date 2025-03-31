@@ -127,6 +127,9 @@ RegOutput LoopClosure::icpAlignment(const pcl::PointCloud<PointType> &src,
   if (overlapness > config_.gicp_config_.overlap_threshold_) {
     reg_output.is_valid_     = true;
     reg_output.is_converged_ = true;
+
+    last_success_icp_time_ = std::chrono::steady_clock::now();
+    has_success_icp_time_  = true;
   }
   if (config_.verbose_) {
     if (overlapness > config_.gicp_config_.overlap_threshold_) {
