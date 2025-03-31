@@ -128,6 +128,9 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
       this->create_wall_timer(std::chrono::duration<double>(1.0 / vis_hz),
                               std::bind(&PoseGraphManager::visualizePoseGraph, this));
 
+  lc_reg_timer_ = this->create_wall_timer(std::chrono::duration<double>(1.0 / 100.0),
+                                          std::bind(&PoseGraphManager::performRegistration, this));
+
   // 20 Hz is enough as long as it's faster than the full registration process.
   lc_vis_timer_ =
       this->create_wall_timer(std::chrono::duration<double>(1.0 / 20.0),

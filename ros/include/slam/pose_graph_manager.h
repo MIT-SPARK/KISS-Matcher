@@ -12,6 +12,7 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
+#include <queue>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -87,6 +88,9 @@ class PoseGraphManager : public rclcpp::Node {
                             const rclcpp::Time &timestamp,
                             const std::string &frame_id);
   void visualizePoseGraph();
+
+  void performRegistration();
+
   void visualizeLoopClosureClouds();
 
   visualization_msgs::msg::Marker visualizeLoopMarkers(const gtsam::Values &corrected_poses) const;
@@ -106,6 +110,7 @@ class PoseGraphManager : public rclcpp::Node {
   std::mutex realtime_pose_mutex_;
   std::mutex keyframes_mutex_;
   std::mutex graph_mutex_;
+  std::mutex lc_mutex_;
   std::mutex vis_mutex_;
 
   Eigen::Matrix4d last_corrected_pose_ = Eigen::Matrix4d::Identity();
@@ -134,6 +139,7 @@ class PoseGraphManager : public rclcpp::Node {
 
   std::vector<std::pair<size_t, size_t>> vis_loop_edges_;
   // pose_graph_tools_msgs::msg::PoseGraph loop_msgs_;
+  std::queue<LoopIdxPair> loop_idx_pair_queue_;
 
   kiss_matcher::TicToc timer_;
 
@@ -185,6 +191,7 @@ class PoseGraphManager : public rclcpp::Node {
   rclcpp::TimerBase::SharedPtr loop_detector_timer_;
   rclcpp::TimerBase::SharedPtr loop_nnsearch_timer_;
   rclcpp::TimerBase::SharedPtr graph_vis_timer_;
+  rclcpp::TimerBase::SharedPtr lc_reg_timer_;
   rclcpp::TimerBase::SharedPtr lc_vis_timer_;
 };
 
