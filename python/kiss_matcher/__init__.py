@@ -31,7 +31,12 @@ __version__ = "1.0.0"
 __all__: list[str] = []
 # Import the backend that CMake just built (“_kiss_matcher” lives inside
 # the same package directory thanks to the change above).
-_backend = _im("kiss_matcher._kiss_matcher")
+try:
+    # Preferred: wheel built with the extension placed in the package
+    _backend = _im("kiss_matcher._kiss_matcher")
+except ModuleNotFoundError:
+    # Fallback: extension was installed at top level (site-packages/_kiss_matcher*.so)
+    _backend = _im("_kiss_matcher")
 # Re-export every non-private attribute so that they appear directly under
 # the top-level `kiss_matcher` namespace.
 for _name in dir(_backend):
