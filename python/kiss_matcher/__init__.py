@@ -19,5 +19,24 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
-# from .kiss_matcher import *
+"""
+High-level Python façade for the KISS-Matcher C++ backend.
+All public symbols from the compiled module are re-exported so users can
+simply::
+    import kiss_matcher as km
+    cfg = km.KISSMatcherConfig(voxel_size=0.3)
+"""
+from importlib import import_module as _im
 __version__ = "1.0.0"
+__all__: list[str] = []
+# Import the backend that CMake just built (“_kiss_matcher” lives inside
+# the same package directory thanks to the change above).
+_backend = _im("kiss_matcher._kiss_matcher")
+# Re-export every non-private attribute so that they appear directly under
+# the top-level `kiss_matcher` namespace.
+for _name in dir(_backend):
+    if not _name.startswith("_"):
+        globals()[_name] = getattr(_backend, _name)
+        __all__.append(_name)
+# Keep a private reference so the module isn’t garbage-collected.
+del _backend, _name, _im

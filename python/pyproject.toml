@@ -37,3 +37,4 @@ dependencies = [
 ]
 
 [tool.scikit-build]
+wheel.packages = ["kiss_matcher"]

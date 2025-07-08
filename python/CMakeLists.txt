@@ -40,7 +40,10 @@ else()
   FetchContent_MakeAvailable(ext_kiss_matcher_core)
 endif()
 
-set(OUTPUT_MODULE_NAME kiss_matcher)
+# Keep the public package called “kiss_matcher”, but put the compiled
+# pybind11 backend in a *private* module so it doesn’t shadow the
+# package directory.
+set(OUTPUT_MODULE_NAME _kiss_matcher)
 
 pybind11_add_module(${OUTPUT_MODULE_NAME} kiss_matcher/pybind/kiss_matcher_pybind.cpp)
 target_link_libraries(${OUTPUT_MODULE_NAME} PUBLIC kiss_matcher_core)
