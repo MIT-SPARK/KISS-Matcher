@@ -43,7 +43,7 @@ using namespace kiss_matcher;
 
 PYBIND11_MAKE_OPAQUE(std::vector<Eigen::Vector3d>);
 
-PYBIND11_MODULE(kiss_matcher, m) {
+PYBIND11_MODULE(_kiss_matcher, m) {
   m.doc()               = "Pybind11 bindings for KISSMatcher library";
   m.attr("__version__") = "0.3.1";
 
