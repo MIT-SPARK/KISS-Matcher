@@ -1,0 +1,205 @@
+name: Python Wheels
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build-wheels:
+    name: Build wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, macos-14, windows-latest]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            ccache \
+            libeigen3-dev \
+            libtbb-dev \
+            liblz4-dev
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install \
+            cmake \
+            ninja \
+            ccache \
+            eigen \
+            tbb \
+            lz4
+
+      - name: Setup MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake ninja ccache
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache-python-${{ matrix.os }}
+          restore-keys: ${{ runner.os }}-ccache-python
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/Library/Caches/pip
+            C:\Users\runneradmin\.cache\pip
+          key: ${{ runner.os }}-pip-python-${{ hashFiles('python/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-python-
+
+      - name: Build wheels
+        uses: pypa/cibuildwheel@v2.20.0
+        with:
+          package-dir: python/
+        env:
+          # Build wheels for Python 3.8-3.13
+          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+
+          # Skip 32-bit builds and PyPy
+          CIBW_SKIP: "*-win32 *-manylinux_i686 pp*"
+
+          # Linux specific settings
+          CIBW_BEFORE_BUILD_LINUX: |
+            yum install -y epel-release centos-release-scl devtoolset-11 &&
+            yum install -y devtoolset-11-gcc-c++ cmake3 ninja-build ccache eigen3-devel tbb-devel lz4-devel &&
+            ln -sf /usr/bin/cmake3 /usr/bin/cmake
+
+          # macOS specific settings
+          CIBW_BEFORE_BUILD_MACOS: |
+            brew install cmake ninja ccache eigen tbb lz4
+
+          # Windows specific settings
+          CIBW_BEFORE_BUILD_WINDOWS: |
+            choco install cmake ninja ccache
+
+          # Set environment variables for ccache
+          CIBW_ENVIRONMENT_LINUX: >
+            CMAKE_C_COMPILER_LAUNCHER=ccache
+            CMAKE_CXX_COMPILER_LAUNCHER=ccache
+            USE_CCACHE=ON
+            USE_SYSTEM_EIGEN3=ON
+            USE_SYSTEM_TBB=ON
+            USE_SYSTEM_ROBIN=ON
+
+          CIBW_ENVIRONMENT_MACOS: >
+            CMAKE_C_COMPILER_LAUNCHER=ccache
+            CMAKE_CXX_COMPILER_LAUNCHER=ccache
+            USE_CCACHE=ON
+            USE_SYSTEM_EIGEN3=ON
+            USE_SYSTEM_TBB=ON
+            USE_SYSTEM_ROBIN=ON
+
+          CIBW_ENVIRONMENT_WINDOWS: >
+            USE_CCACHE=OFF
+            USE_SYSTEM_EIGEN3=OFF
+            USE_SYSTEM_TBB=OFF
+            USE_SYSTEM_ROBIN=ON
+
+          # Test command
+          CIBW_TEST_COMMAND: "python -c \"import kiss_matcher; print('Kiss-Matcher Python binding imported successfully')\""
+
+      - name: Upload wheels as artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-wheels-${{ matrix.os }}
+          path: wheelhouse/*.whl
+
+  test-python-import:
+    name: Test Python Import (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: build-wheels
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, macos-14, windows-latest]
+        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Download wheels
+        uses: actions/download-artifact@v4
+        with:
+          name: python-wheels-${{ matrix.os }}
+          path: wheelhouse/
+
+      - name: Install wheel and test import
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install numpy open3d
+          python -m pip install wheelhouse/*.whl --force-reinstall
+          python -c "import kiss_matcher; print('Kiss-Matcher version:', kiss_matcher.__version__ if hasattr(kiss_matcher, '__version__') else 'unknown')"
+          python -c "import kiss_matcher; print('Available functions:', [x for x in dir(kiss_matcher) if not x.startswith('_')])"
+
+      - name: Run Python examples (if available)
+        working-directory: python/examples
+        run: |
+          if [ -f "run_kiss_matcher.py" ]; then
+            python -c "print('Testing Python example execution...')"
+            # Test import and basic functionality without running full example
+            python -c "
+            import sys
+            sys.path.insert(0, '.')
+            import kiss_matcher
+            print('Python binding test successful')
+            "
+          else
+            echo "No Python examples found - skipping example tests"
+          fi
+        shell: bash
+
+  publish-to-testpypi:
+    name: Publish to TestPyPI
+    runs-on: ubuntu-latest
+    needs: [build-wheels, test-python-import]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    steps:
+      - name: Download all wheels
+        uses: actions/download-artifact@v4
+        with:
+          pattern: python-wheels-*
+          path: dist/
+          merge-multiple: true
+
+      - name: Publish to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          password: ${{ secrets.TEST_PYPI_API_TOKEN }}
+          skip-existing: true

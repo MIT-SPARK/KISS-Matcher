@@ -1,0 +1,216 @@
+name: C++ Core Build
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  cpp-build:
+    name: C++ Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04, macos-14, windows-latest]
+        include:
+          - os: ubuntu-22.04
+            cc: gcc-11
+            cxx: g++-11
+          - os: ubuntu-24.04
+            cc: gcc-13
+            cxx: g++-13
+          - os: macos-14
+            cc: clang
+            cxx: clang++
+          - os: windows-latest
+            cc: cl
+            cxx: cl
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python (for build tools)
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install system dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            ccache \
+            libeigen3-dev \
+            libtbb-dev \
+            liblz4-dev \
+            ${{ matrix.cxx }}
+
+      - name: Install system dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install \
+            cmake \
+            ninja \
+            ccache \
+            eigen \
+            tbb \
+            lz4
+
+      - name: Setup MSVC (Windows)
+        if: runner.os == 'Windows'
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Install dependencies (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          choco install cmake ninja ccache
+          # Windows will use vcpkg for dependencies
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache-cpp-${{ matrix.os }}
+          restore-keys: ${{ runner.os }}-ccache-cpp
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/pip
+            ~/Library/Caches/pip
+            C:\Users\runneradmin\.cache\pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Configure CMake (Unix)
+        if: runner.os != 'Windows'
+        run: |
+          export CC=${{ matrix.cc }}
+          export CXX=${{ matrix.cxx }}
+          cmake -S cpp/kiss_matcher \
+                -B build \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DUSE_CCACHE=ON \
+                -DUSE_SYSTEM_EIGEN3=ON \
+                -DUSE_SYSTEM_TBB=ON \
+                -DUSE_SYSTEM_ROBIN=ON
+
+      - name: Configure CMake (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          cmake -S cpp/kiss_matcher `
+                -B build `
+                -G "Visual Studio 17 2022" `
+                -DCMAKE_BUILD_TYPE=Release `
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
+                -DUSE_CCACHE=OFF `
+                -DUSE_SYSTEM_EIGEN3=OFF `
+                -DUSE_SYSTEM_TBB=OFF `
+                -DUSE_SYSTEM_ROBIN=ON
+
+      - name: Build C++ Core
+        run: cmake --build build --config Release --parallel
+
+      - name: Run C++ Tests (if available)
+        run: |
+          if [ -d "build/tests" ] || [ -d "build/Release/tests" ]; then
+            ctest --test-dir build --output-on-failure --parallel
+          else
+            echo "No C++ tests found - skipping test execution"
+          fi
+        shell: bash
+
+      - name: Upload compile_commands.json
+        if: matrix.os == 'ubuntu-22.04'
+        uses: actions/upload-artifact@v4
+        with:
+          name: compile-commands
+          path: build/compile_commands.json
+
+      - name: Upload build artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpp-build-${{ matrix.os }}
+          path: |
+            build/
+            !build/**/*.o
+            !build/**/*.obj
+            !build/**/CMakeFiles/
+
+  examples-build:
+    name: Examples Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    needs: cpp-build
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, ubuntu-24.04]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            build-essential \
+            cmake \
+            ninja-build \
+            ccache \
+            libeigen3-dev \
+            libtbb-dev \
+            liblz4-dev \
+            libpcl-dev
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache-examples-${{ matrix.os }}
+
+      - name: Build KISS-Matcher Core first
+        run: |
+          cmake -S cpp/kiss_matcher \
+                -B build/core \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                -DUSE_SYSTEM_EIGEN3=ON \
+                -DUSE_SYSTEM_TBB=ON \
+                -DUSE_SYSTEM_ROBIN=ON
+          cmake --build build/core --config Release --parallel
+
+      - name: Install KISS-Matcher Core
+        run: |
+          sudo cmake --install build/core
+
+      - name: Build Examples
+        run: |
+          cmake -S cpp/examples \
+                -B build/examples \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake --build build/examples --config Release --parallel
+
+      - name: Upload example binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: examples-${{ matrix.os }}
+          path: build/examples/
