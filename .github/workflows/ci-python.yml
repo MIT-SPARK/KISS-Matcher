@@ -39,9 +39,15 @@ jobs:
       - name: Install system dependencies
         run: |
           sudo apt-get install -y \
+            gcc \
+            g++ \
             build-essential \
-            ninja-build \
             libeigen3-dev \
+            python3-pip \
+            python3-dev \
+            git \
+            ninja-build \
+            libflann-dev \
             libtbb-dev \
             liblz4-dev
 
@@ -76,11 +82,17 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            gcc \
+            g++ \
             build-essential \
-            cmake \
-            ninja-build \
-            ccache \
             libeigen3-dev \
+            python3-pip \
+            python3-dev \
+            cmake \
+            git \
+            ninja-build \
+            libflann-dev \
+            ccache \
             libtbb-dev \
             liblz4-dev
 
