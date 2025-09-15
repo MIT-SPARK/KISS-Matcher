@@ -209,9 +209,9 @@ jobs:
           # This reproduces the exact scenario from issue #77
           mkdir -p /tmp/test_ws/src
 
-          # Copy KISS-Matcher source
-          cp -r /github/workspace/cpp/kiss_matcher /tmp/test_ws/src/
-          cp -r /github/workspace/ros /tmp/test_ws/src/kiss_matcher_ros
+          # Copy KISS-Matcher source (GitHub workspace path in containers)
+          cp -r $GITHUB_WORKSPACE/cpp/kiss_matcher /tmp/test_ws/src/
+          cp -r $GITHUB_WORKSPACE/ros /tmp/test_ws/src/kiss_matcher_ros
 
           cd /tmp/test_ws
 
