@@ -27,15 +27,34 @@ option(PMC_BUILD_SHARED "Build pmc as a shared library (.so)" OFF)
 include(FetchContent)
 FetchContent_Declare(robin URL https://github.com/MIT-SPARK/ROBIN/archive/refs/tags/v.1.2.4.tar.gz)
 FetchContent_GetProperties(robin)
-if(NOT robin)
-  FetchContent_Populate(robin)
-  if(${CMAKE_VERSION} GREATER_EQUAL 3.25)
-    add_subdirectory(${robin_SOURCE_DIR} ${robin_BINARY_DIR} SYSTEM EXCLUDE_FROM_ALL)
-  else()
-    # Emulate the SYSTEM flag introduced in CMake 3.25. Withouth this flag the compiler will
-    # consider this 3rdparty headers as source code and fail due the -Werror flag.
+
+# Prefer FetchContent_MakeAvailable when available (CMake 3.14+)
+if(COMMAND FetchContent_MakeAvailable)
+  FetchContent_MakeAvailable(robin)
+
+  # Mark ROBIN's include dirs as 'SYSTEM' to ignore third-party warnings
+  get_target_property(_robin_inc robin INTERFACE_INCLUDE_DIRECTORIES)
+  if(_robin_inc)
+    set_target_properties(robin PROPERTIES
+      INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_robin_inc}")
+  endif()
+
+# Fallback for older/special environments: Populate + add_subdirectory
+else()
+  # On CMake 3.30+, suppress CMP0169 warning for FetchContent_Populate by setting it to OLD
+  if(POLICY CMP0169)
+    cmake_policy(SET CMP0169 OLD)
+  endif()
+
+  FetchContent_GetProperties(robin)
+  if(NOT robin_POPULATED)
+    FetchContent_Populate(robin)
+    # Before 3.25 there is no SYSTEM option, so set system includes manually
     add_subdirectory(${robin_SOURCE_DIR} ${robin_BINARY_DIR} EXCLUDE_FROM_ALL)
-    get_target_property(robin_include_dirs robin INTERFACE_INCLUDE_DIRECTORIES)
-    set_target_properties(robin PROPERTIES INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${robin_include_dirs}")
+    get_target_property(_robin_inc robin INTERFACE_INCLUDE_DIRECTORIES)
+    if(_robin_inc)
+      set_target_properties(robin PROPERTIES
+        INTERFACE_SYSTEM_INCLUDE_DIRECTORIES "${_robin_inc}")
+    endif()
   endif()
 endif()
