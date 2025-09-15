@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.24)
+cmake_minimum_required(VERSION 3.16...3.31)
 project(kiss_matcher VERSION 0.3.0 LANGUAGES CXX)
 
 message("")
