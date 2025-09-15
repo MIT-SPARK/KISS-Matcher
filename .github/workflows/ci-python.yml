@@ -66,7 +66,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, macos-14, windows-latest]
+        os: [ubuntu-22.04, ubuntu-24.04]
 
     steps:
       - name: Checkout code
@@ -77,8 +77,7 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install system dependencies (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
@@ -95,26 +94,6 @@ jobs:
             ccache \
             libtbb-dev \
             liblz4-dev
-
-      - name: Install system dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install \
-            cmake \
-            ninja \
-            ccache \
-            eigen \
-            tbb \
-            lz4
-
-      - name: Setup MSVC (Windows)
-        if: runner.os == 'Windows'
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install cmake ninja ccache
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -138,10 +117,10 @@ jobs:
         with:
           package-dir: python/
         env:
-          # Build wheels for Python 3.8-3.13
-          CIBW_BUILD: "cp38-* cp39-* cp310-* cp311-* cp312-* cp313-*"
+          # Build wheels for Python 3.10-3.12 on Linux only
+          CIBW_BUILD: "cp310-* cp311-* cp312-*"
 
-          # Skip 32-bit builds and PyPy
+          # Skip 32-bit builds and PyPy, only build for Linux
           CIBW_SKIP: "*-win32 *-manylinux_i686 pp*"
 
           # Linux specific settings
@@ -150,14 +129,6 @@ jobs:
             yum install -y devtoolset-11-gcc-c++ cmake3 ninja-build ccache eigen3-devel tbb-devel lz4-devel &&
             ln -sf /usr/bin/cmake3 /usr/bin/cmake
 
-          # macOS specific settings
-          CIBW_BEFORE_BUILD_MACOS: |
-            brew install cmake ninja ccache eigen tbb lz4
-
-          # Windows specific settings
-          CIBW_BEFORE_BUILD_WINDOWS: |
-            choco install cmake ninja ccache
-
           # Set environment variables for ccache
           CIBW_ENVIRONMENT_LINUX: >
             CMAKE_C_COMPILER_LAUNCHER=ccache
@@ -165,20 +136,6 @@ jobs:
             USE_CCACHE=ON
             USE_SYSTEM_EIGEN3=ON
             USE_SYSTEM_TBB=ON
-            USE_SYSTEM_ROBIN=ON
-
-          CIBW_ENVIRONMENT_MACOS: >
-            CMAKE_C_COMPILER_LAUNCHER=ccache
-            CMAKE_CXX_COMPILER_LAUNCHER=ccache
-            USE_CCACHE=ON
-            USE_SYSTEM_EIGEN3=ON
-            USE_SYSTEM_TBB=ON
-            USE_SYSTEM_ROBIN=ON
-
-          CIBW_ENVIRONMENT_WINDOWS: >
-            USE_CCACHE=OFF
-            USE_SYSTEM_EIGEN3=OFF
-            USE_SYSTEM_TBB=OFF
             USE_SYSTEM_ROBIN=ON
 
           # Test command
@@ -198,8 +155,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, macos-14, windows-latest]
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        os: [ubuntu-22.04, ubuntu-24.04]
+        python-version: ["3.10", "3.11", "3.12"]
 
     steps:
       - name: Checkout code

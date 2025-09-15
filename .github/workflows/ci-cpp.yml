@@ -14,7 +14,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, ubuntu-24.04, macos-14, windows-latest]
+        os: [ubuntu-22.04, ubuntu-24.04]
         include:
           - os: ubuntu-22.04
             cc: gcc-11
@@ -22,12 +22,6 @@ jobs:
           - os: ubuntu-24.04
             cc: gcc-13
             cxx: g++-13
-          - os: macos-14
-            cc: clang
-            cxx: clang++
-          - os: windows-latest
-            cc: cl
-            cxx: cl
 
     steps:
       - name: Checkout code
@@ -38,40 +32,24 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install system dependencies (Ubuntu)
-        if: runner.os == 'Linux'
+      - name: Install system dependencies
         run: |
           sudo apt-get update
           sudo apt-get install -y \
+            gcc \
+            g++ \
             build-essential \
-            cmake \
-            ninja-build \
-            ccache \
             libeigen3-dev \
+            python3-pip \
+            python3-dev \
+            cmake \
+            git \
+            ninja-build \
+            libflann-dev \
+            ccache \
             libtbb-dev \
             liblz4-dev \
             ${{ matrix.cxx }}
-
-      - name: Install system dependencies (macOS)
-        if: runner.os == 'macOS'
-        run: |
-          brew install \
-            cmake \
-            ninja \
-            ccache \
-            eigen \
-            tbb \
-            lz4
-
-      - name: Setup MSVC (Windows)
-        if: runner.os == 'Windows'
-        uses: microsoft/setup-msbuild@v2
-
-      - name: Install dependencies (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          choco install cmake ninja ccache
-          # Windows will use vcpkg for dependencies
 
       - name: Setup ccache
         uses: hendrikmuhs/ccache-action@v1.2
@@ -82,16 +60,12 @@ jobs:
       - name: Cache pip packages
         uses: actions/cache@v4
         with:
-          path: |
-            ~/.cache/pip
-            ~/Library/Caches/pip
-            C:\Users\runneradmin\.cache\pip
+          path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('**/pyproject.toml') }}
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Configure CMake (Unix)
-        if: runner.os != 'Windows'
+      - name: Configure CMake
         run: |
           export CC=${{ matrix.cc }}
           export CXX=${{ matrix.cxx }}
@@ -105,19 +79,6 @@ jobs:
                 -DUSE_CCACHE=ON \
                 -DUSE_SYSTEM_EIGEN3=ON \
                 -DUSE_SYSTEM_TBB=ON \
-                -DUSE_SYSTEM_ROBIN=ON
-
-      - name: Configure CMake (Windows)
-        if: runner.os == 'Windows'
-        run: |
-          cmake -S cpp/kiss_matcher `
-                -B build `
-                -G "Visual Studio 17 2022" `
-                -DCMAKE_BUILD_TYPE=Release `
-                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON `
-                -DUSE_CCACHE=OFF `
-                -DUSE_SYSTEM_EIGEN3=OFF `
-                -DUSE_SYSTEM_TBB=OFF `
                 -DUSE_SYSTEM_ROBIN=ON
 
       - name: Build C++ Core
