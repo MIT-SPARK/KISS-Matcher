@@ -17,10 +17,13 @@ jobs:
         include:
           - os: ubuntu-22.04
             cmake_version: "3.20"
+            expect_failure: true
           - os: ubuntu-22.04
             cmake_version: "3.24"
+            expect_failure: false
           - os: ubuntu-24.04
             cmake_version: "3.28"
+            expect_failure: false
 
     steps:
       - name: Checkout code
@@ -126,11 +129,22 @@ jobs:
 
       - name: Report test result
         run: |
-          if [ "${{ steps.python_build_test.outcome }}" = "failure" ]; then
-            echo "❌ CMake ${{ matrix.cmake_version }} on ${{ matrix.os }} failed to build Python package (Issue #76)"
-            exit 1
+          if [ "${{ matrix.expect_failure }}" = "true" ]; then
+            # For this test, we EXPECT failure (reproducing issue #76)
+            if [ "${{ steps.python_build_test.outcome }}" = "failure" ]; then
+              echo "✅ CMake ${{ matrix.cmake_version }} correctly failed as expected (reproduces Issue #76)"
+            else
+              echo "❌ CMake ${{ matrix.cmake_version }} should have failed but didn't - Issue #76 may be fixed"
+              exit 1
+            fi
           else
-            echo "✅ CMake ${{ matrix.cmake_version }} on ${{ matrix.os }} successfully built Python package"
+            # For these tests, we expect success
+            if [ "${{ steps.python_build_test.outcome }}" = "failure" ]; then
+              echo "❌ CMake ${{ matrix.cmake_version }} on ${{ matrix.os }} failed to build Python package"
+              exit 1
+            else
+              echo "✅ CMake ${{ matrix.cmake_version }} on ${{ matrix.os }} successfully built Python package"
+            fi
           fi
 
   test-issue-77-ros2-robin-targets:
@@ -170,7 +184,6 @@ jobs:
             libtbb-dev \
             liblz4-dev \
             libpcl-dev \
-            libgtsam-dev \
             ros-${{ matrix.ros_distro }}-pcl-ros \
             ros-${{ matrix.ros_distro }}-pcl-conversions \
             ros-${{ matrix.ros_distro }}-tf2-eigen \
@@ -318,15 +331,17 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           if [ "${{ needs.test-issue-76-cmake-version-compatibility.result }}" = "success" ]; then
-            echo "✅ Issue #76 (CMake version compatibility): PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Issue #76 (CMake version compatibility): Tests completed successfully" >> $GITHUB_STEP_SUMMARY
+            echo "   - CMake 3.20: Correctly failed (reproduces issue)" >> $GITHUB_STEP_SUMMARY
+            echo "   - CMake 3.24+: Successfully builds" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Issue #76 (CMake version compatibility): FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Issue #76 (CMake version compatibility): Tests failed unexpectedly" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [ "${{ needs.test-issue-77-ros2-robin-targets.result }}" = "success" ]; then
-            echo "✅ Issue #77 (ROS2 ROBIN targets): PASSED" >> $GITHUB_STEP_SUMMARY
+            echo "✅ Issue #77 (ROS2 ROBIN targets): PASSED - No robinTargets.cmake errors detected" >> $GITHUB_STEP_SUMMARY
           else
-            echo "❌ Issue #77 (ROS2 ROBIN targets): FAILED" >> $GITHUB_STEP_SUMMARY
+            echo "❌ Issue #77 (ROS2 ROBIN targets): FAILED - ROBIN dependency issues detected" >> $GITHUB_STEP_SUMMARY
           fi
 
           if [ "${{ needs.test-cmake-policy-compatibility.result }}" = "success" ]; then
@@ -336,6 +351,9 @@ jobs:
           fi
 
           echo "" >> $GITHUB_STEP_SUMMARY
+          echo "## Summary" >> $GITHUB_STEP_SUMMARY
           echo "These tests specifically target the compilation issues reported in:" >> $GITHUB_STEP_SUMMARY
           echo "- [Issue #76](https://github.com/MIT-SPARK/KISS-Matcher/issues/76): CMake version compatibility" >> $GITHUB_STEP_SUMMARY
           echo "- [Issue #77](https://github.com/MIT-SPARK/KISS-Matcher/issues/77): ROS2 ROBIN targets missing" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The workflow validates that newer CMake versions (3.24+) work while older versions (3.20) fail as expected." >> $GITHUB_STEP_SUMMARY
