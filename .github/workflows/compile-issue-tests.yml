@@ -1,0 +1,253 @@
+name: Compilation Issue Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test-issue-76-cmake-version-compatibility:
+    name: Test Issue #76 - CMake Version Compatibility
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        cmake_version: ["3.16", "3.18", "3.20", "3.22", "3.24"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install specific CMake version
+        run: |
+          sudo apt-get update
+          sudo apt-get remove -y cmake cmake-data
+
+          # Install specific CMake version via pip for better version control
+          pip install cmake==${{ matrix.cmake_version }}.*
+
+          # Verify version
+          cmake --version
+          echo "CMake version: ${{ matrix.cmake_version }}"
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get install -y \
+            build-essential \
+            ninja-build \
+            libeigen3-dev \
+            libtbb-dev \
+            liblz4-dev
+
+      - name: Test Python package build (reproduces issue #76)
+        id: python_build_test
+        continue-on-error: true
+        working-directory: python/
+        run: |
+          pip install --upgrade pip wheel setuptools scikit-build-core pybind11
+          echo "Attempting to build Python package with CMake ${{ matrix.cmake_version }}..."
+
+          # This should reproduce the CMake version compatibility issue
+          pip install -e . --verbose 2>&1 | tee build_log.txt
+
+          # Check for specific error patterns from issue #76
+          if grep -q "CMake.*version.*earlier than.*3\.5" build_log.txt; then
+            echo "ERROR: Detected CMake version compatibility issue from #76"
+            exit 1
+          fi
+
+      - name: Report test result
+        run: |
+          if [ "${{ steps.python_build_test.outcome }}" = "failure" ]; then
+            echo "❌ CMake ${{ matrix.cmake_version }} failed to build Python package (Issue #76)"
+            exit 1
+          else
+            echo "✅ CMake ${{ matrix.cmake_version }} successfully built Python package"
+          fi
+
+  test-issue-77-ros2-robin-targets:
+    name: Test Issue #77 - ROS2 ROBIN Targets
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - ros_distro: humble
+            ubuntu_version: "22.04"
+          - ros_distro: jazzy
+            ubuntu_version: "24.04"
+
+    container:
+      image: osrf/ros:${{ matrix.ros_distro }}-desktop
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup ROS2 environment
+        run: |
+          apt-get update
+          apt-get install -y \
+            python3-colcon-common-extensions \
+            python3-rosdep \
+            build-essential \
+            cmake \
+            ninja-build \
+            git \
+            libeigen3-dev \
+            libtbb-dev \
+            liblz4-dev \
+            libpcl-dev \
+            libgtsam-dev \
+            ros-${{ matrix.ros_distro }}-pcl-ros \
+            ros-${{ matrix.ros_distro }}-pcl-conversions
+
+      - name: Check CMake and system versions
+        run: |
+          echo "=== System Information ==="
+          cmake --version
+          lsb_release -a
+          echo "ROS_DISTRO: ${{ matrix.ros_distro }}"
+
+      - name: Test ROBIN dependency resolution (reproduces issue #77)
+        id: robin_test
+        continue-on-error: true
+        run: |
+          # This reproduces the exact scenario from issue #77
+          mkdir -p /tmp/test_ws/src
+
+          # Copy KISS-Matcher source
+          cp -r /github/workspace/cpp/kiss_matcher /tmp/test_ws/src/
+          cp -r /github/workspace/ros /tmp/test_ws/src/kiss_matcher_ros
+
+          cd /tmp/test_ws
+
+          # Source ROS environment
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+
+          echo "Attempting colcon build (this should reproduce issue #77)..."
+
+          # Attempt build - this should fail with robinTargets.cmake error
+          colcon build \
+            --packages-select kiss_matcher \
+            --cmake-args \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DUSE_SYSTEM_ROBIN=ON \
+            --parallel-workers 1 \
+            --event-handlers console_direct+ 2>&1 | tee build_log.txt
+
+          # Check for the specific error from issue #77
+          if grep -q "robinTargets\.cmake" build_log.txt; then
+            echo "ERROR: Detected robinTargets.cmake error from issue #77"
+            cat build_log.txt
+            exit 1
+          fi
+
+      - name: Test ROS2 wrapper build
+        if: steps.robin_test.outcome == 'success'
+        run: |
+          cd /tmp/test_ws
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+          source install/setup.bash
+
+          echo "Building ROS2 wrapper..."
+          colcon build \
+            --packages-select kiss_matcher_ros \
+            --cmake-args -DCMAKE_BUILD_TYPE=Release \
+            --parallel-workers 1
+
+      - name: Report test result
+        run: |
+          if [ "${{ steps.robin_test.outcome }}" = "failure" ]; then
+            echo "❌ ROS2 ${{ matrix.ros_distro }} failed with ROBIN targets issue (Issue #77)"
+            exit 1
+          else
+            echo "✅ ROS2 ${{ matrix.ros_distro }} successfully resolved ROBIN dependencies"
+          fi
+
+  test-cmake-policy-compatibility:
+    name: Test CMake Policy Compatibility
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Test CMake policies across versions
+        run: |
+          # Test various CMake versions and their policy handling
+          echo "Testing CMake policy compatibility..."
+
+          # Create test CMakeLists.txt that mimics KISS-Matcher's dependency handling
+          mkdir -p /tmp/cmake_policy_test
+          cd /tmp/cmake_policy_test
+
+          cat > CMakeLists.txt << 'EOF'
+          # Test different minimum required versions like in KISS-Matcher
+          cmake_minimum_required(VERSION 3.16...3.26)
+          project(cmake_policy_test)
+
+          # Test the policy that affects FetchContent (from find_dependencies.cmake)
+          if(CMAKE_VERSION VERSION_GREATER 3.24)
+            cmake_policy(SET CMP0135 OLD)
+          endif()
+
+          # Test FetchContent with ROBIN like in the actual project
+          include(FetchContent)
+          FetchContent_Declare(
+            robin
+            URL https://github.com/MIT-SPARK/ROBIN/archive/refs/tags/v.1.2.4.tar.gz
+          )
+          FetchContent_GetProperties(robin)
+          if(NOT robin)
+            FetchContent_Populate(robin)
+            message(STATUS "Successfully populated ROBIN dependency")
+          endif()
+          EOF
+
+          # Test configuration
+          cmake -S . -B build -G Ninja
+          echo "CMake policy compatibility test passed"
+
+  summary:
+    name: Compilation Issue Test Summary
+    runs-on: ubuntu-22.04
+    needs: [test-issue-76-cmake-version-compatibility, test-issue-77-ros2-robin-targets, test-cmake-policy-compatibility]
+    if: always()
+
+    steps:
+      - name: Generate summary
+        run: |
+          echo "## Compilation Issue Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+
+          if [ "${{ needs.test-issue-76-cmake-version-compatibility.result }}" = "success" ]; then
+            echo "✅ Issue #76 (CMake version compatibility): PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Issue #76 (CMake version compatibility): FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.test-issue-77-ros2-robin-targets.result }}" = "success" ]; then
+            echo "✅ Issue #77 (ROS2 ROBIN targets): PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ Issue #77 (ROS2 ROBIN targets): FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          if [ "${{ needs.test-cmake-policy-compatibility.result }}" = "success" ]; then
+            echo "✅ CMake Policy Compatibility: PASSED" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "❌ CMake Policy Compatibility: FAILED" >> $GITHUB_STEP_SUMMARY
+          fi
+
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "These tests specifically target the compilation issues reported in:" >> $GITHUB_STEP_SUMMARY
+          echo "- [Issue #76](https://github.com/MIT-SPARK/KISS-Matcher/issues/76): CMake version compatibility" >> $GITHUB_STEP_SUMMARY
+          echo "- [Issue #77](https://github.com/MIT-SPARK/KISS-Matcher/issues/77): ROS2 ROBIN targets missing" >> $GITHUB_STEP_SUMMARY

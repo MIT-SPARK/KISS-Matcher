@@ -7,9 +7,119 @@ on:
     branches: [main]
 
 jobs:
+  ros2-cmake-compatibility-test:
+    name: ROS2 CMake Compatibility Test (${{ matrix.ros_distro }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            ros_distro: humble
+            cmake_version: "3.22"
+          - os: ubuntu-24.04
+            ros_distro: jazzy
+            cmake_version: "3.28"
+
+    container:
+      image: osrf/ros:${{ matrix.ros_distro }}-desktop
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup ROS2 workspace
+        run: |
+          apt-get update
+          apt-get install -y \
+            python3-pip \
+            python3-colcon-common-extensions \
+            python3-colcon-mixin \
+            python3-rosdep \
+            python3-vcstool \
+            build-essential \
+            cmake \
+            ninja-build \
+            ccache \
+            git \
+            wget \
+            curl
+
+      - name: Check CMake version and verify compatibility
+        run: |
+          cmake --version
+          echo "Testing CMake policy compatibility..."
+
+          # Test robin dependency resolution specifically
+          mkdir -p /tmp/cmake_test
+          cd /tmp/cmake_test
+
+          # Create a minimal CMakeLists.txt that mimics the robin dependency issue
+          cat > CMakeLists.txt << 'EOF'
+          cmake_minimum_required(VERSION 3.16)
+          project(test_robin_deps)
+
+          if(CMAKE_VERSION VERSION_GREATER 3.24)
+            cmake_policy(SET CMP0135 OLD)
+          endif()
+
+          include(FetchContent)
+          FetchContent_Declare(robin URL https://github.com/MIT-SPARK/ROBIN/archive/refs/tags/v.1.2.4.tar.gz)
+          FetchContent_GetProperties(robin)
+          if(NOT robin)
+            FetchContent_Populate(robin)
+            message(STATUS "Robin populated successfully")
+          endif()
+          EOF
+
+          # Test if this works with current CMake version
+          cmake -S . -B build || (echo "CMake configuration failed - this would cause issue #77" && exit 1)
+          echo "CMake compatibility test passed"
+
+      - name: Install system dependencies
+        run: |
+          apt-get install -y \
+            libeigen3-dev \
+            libtbb-dev \
+            liblz4-dev \
+            libpcl-dev \
+            libgtsam-dev \
+            ros-${{ matrix.ros_distro }}-pcl-ros \
+            ros-${{ matrix.ros_distro }}-pcl-conversions \
+            ros-${{ matrix.ros_distro }}-tf2-eigen \
+            ros-${{ matrix.ros_distro }}-tf2-geometry-msgs \
+            ros-${{ matrix.ros_distro }}-tf2-sensor-msgs
+
+      - name: Test ROBIN dependency resolution in isolation
+        run: |
+          # This specifically tests the issue mentioned in #77
+          mkdir -p /tmp/robin_test
+          cd /tmp/robin_test
+
+          # Create test workspace
+          source /opt/ros/${{ matrix.ros_distro }}/setup.bash
+
+          # Copy just the core KISS-Matcher to test robin dependency
+          mkdir -p test_ws/src
+          cp -r /github/workspace/cpp/kiss_matcher test_ws/src/
+
+          cd test_ws
+
+          # Try to build just the core with colcon to test robin targets
+          colcon build --packages-select kiss_matcher \
+            --cmake-args \
+              -DCMAKE_BUILD_TYPE=Release \
+              -DUSE_SYSTEM_EIGEN3=ON \
+              -DUSE_SYSTEM_TBB=ON \
+              -DUSE_SYSTEM_ROBIN=ON \
+            --parallel-workers 1 \
+            --event-handlers console_direct+
+
   ros2-build:
     name: ROS2 ${{ matrix.ros_distro }} (${{ matrix.os }})
     runs-on: ${{ matrix.os }}
+    needs: ros2-cmake-compatibility-test
 
     strategy:
       fail-fast: false

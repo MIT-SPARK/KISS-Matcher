@@ -7,9 +7,55 @@ on:
     branches: [main]
 
 jobs:
+  cmake-compatibility-test:
+    name: CMake Compatibility Test (${{ matrix.cmake_version }})
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        cmake_version: ["3.16", "3.20", "3.24", "3.28"]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install specific CMake version
+        run: |
+          sudo apt-get update
+          sudo apt-get remove cmake
+          if [ "${{ matrix.cmake_version }}" = "3.16" ]; then
+            sudo apt-get install -y cmake=3.16.3-1ubuntu1* cmake-data=3.16.3-1ubuntu1*
+          else
+            pip install cmake==${{ matrix.cmake_version }}.*
+          fi
+          cmake --version
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get install -y \
+            build-essential \
+            ninja-build \
+            libeigen3-dev \
+            libtbb-dev \
+            liblz4-dev
+
+      - name: Test Python package compilation with CMake ${{ matrix.cmake_version }}
+        working-directory: python/
+        run: |
+          pip install --upgrade pip wheel setuptools
+          # Test if compilation works with this CMake version
+          pip install -e . --verbose
+
   build-wheels:
     name: Build wheels on ${{ matrix.os }}
     runs-on: ${{ matrix.os }}
+    needs: cmake-compatibility-test
 
     strategy:
       fail-fast: false
