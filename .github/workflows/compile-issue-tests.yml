@@ -17,7 +17,7 @@ jobs:
         include:
           - os: ubuntu-22.04
             cmake_version: "3.20"
-            expect_failure: true
+            expect_failure: false
           - os: ubuntu-22.04
             cmake_version: "3.24"
             expect_failure: false
