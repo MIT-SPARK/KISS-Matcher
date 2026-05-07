@@ -46,6 +46,13 @@ include(cmake/CompilerOptions.cmake)
 # NOTE(hlim): Without this line, pybinded KISS-Matcher does not work
 find_library(LZ4_LIBRARY lz4 REQUIRED)
 
+# flann is consumed directly via `#include <flann/flann.hpp>` in our public
+# headers (e.g. ROBINMatching.hpp). Historically it came in as a transitive
+# include from ROBIN, but the installed ROBIN config does not propagate flann,
+# so on systems where flann is not in default search paths (e.g. Homebrew on
+# macOS at /opt/homebrew/include) the build fails. Declare it explicitly.
+find_package(flann CONFIG REQUIRED)
+
 include(FindOpenMP) #The best way to set proper compiler settings for using OpenMP in all platforms
 if (OPENMP_FOUND) #The best way to set proper compiler settings for using OpenMP in all platforms
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
@@ -71,7 +78,7 @@ add_library(${TARGET_NAME} STATIC
 add_library(kiss_matcher::kiss_matcher_core ALIAS kiss_matcher_core)
 
 target_link_libraries(${TARGET_NAME}
-    PUBLIC Eigen3::Eigen robin::robin ${OpenMP_LIBS} ${EIGEN3_LIBS} TBB::tbb ${LZ4_LIBRARY}
+    PUBLIC Eigen3::Eigen robin::robin flann::flann_cpp ${OpenMP_LIBS} ${EIGEN3_LIBS} TBB::tbb ${LZ4_LIBRARY}
 )
 
 # To make kiss_matcher::core global for Pybinding

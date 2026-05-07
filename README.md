@@ -27,6 +27,15 @@ cd KISS-Matcher
 make deps
 ```
 
+`make deps` auto-detects the host OS:
+
+- **Linux (Ubuntu/Debian):** installs the toolchain via `apt-get`.
+- **macOS (Apple Silicon / Intel):** installs the toolchain via [Homebrew](https://brew.sh).
+  AppleClang does not ship with OpenMP, so we pull in `llvm` + `libomp`
+  from Homebrew and the `Makefile` automatically routes the C++ build through
+  `$(brew --prefix llvm)/bin/clang++`. If you have not installed Homebrew yet,
+  install it first from https://brew.sh.
+
 After that, follow the C++ or Python installation instructions below.
 
 ---
@@ -66,6 +75,28 @@ But it's also automatically linked via [robin.cmake](https://github.com/MIT-SPAR
 
 After installation, `kiss_matcher` and `robin` are placed in the installation directory using the following commands in the `Makefile`, respectively:
 `	@$(SUDO) cmake --install cpp/kiss_matcher/build 	@$(SUDO) cmake --install cpp/kiss_matcher/build/_deps/robin-build    `
+
+</details>
+
+<details>
+  <summary><strong>Q. Building from a non-Makefile flow on macOS?</strong></summary>
+
+If you invoke `cmake` directly on macOS instead of going through `make
+cppinstall`, point CMake at the Homebrew LLVM toolchain so OpenMP is available:
+
+```bash
+LLVM_PREFIX=$(brew --prefix llvm)
+cmake -S cpp/kiss_matcher -B build \
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_C_COMPILER="$LLVM_PREFIX/bin/clang" \
+      -DCMAKE_CXX_COMPILER="$LLVM_PREFIX/bin/clang++" \
+      -DUSE_SYSTEM_ROBIN=OFF
+cmake --build build -j$(sysctl -n hw.ncpu)
+```
+
+`USE_SYSTEM_ROBIN=OFF` forces a fresh ROBIN via `FetchContent` and avoids
+picking up an older / incompatible system install. On Linux this flag is not
+required, but it is harmless.
 
 </details>
 
