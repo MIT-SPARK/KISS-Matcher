@@ -211,6 +211,10 @@ jobs:
         os: [macos-14, macos-13]
         python-version: ['3.10', '3.12']
 
+    # See ci-cpp.yml for why this env is set on the macOS jobs.
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

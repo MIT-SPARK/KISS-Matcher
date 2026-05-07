@@ -171,6 +171,14 @@ jobs:
       matrix:
         os: [macos-14, macos-13]
 
+    # Homebrew on the macOS runners ships CMake 4.x, which hard-errors on
+    # legacy `cmake_minimum_required(VERSION 2.x)` in transitive deps
+    # (notably PMC, fetched by ROBIN through a separate DownloadProject
+    # invocation that does not inherit the policy variable). The env var
+    # IS inherited and lets the legacy minimum continue to configure.
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: "3.5"
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
