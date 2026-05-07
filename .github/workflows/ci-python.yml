@@ -198,10 +198,92 @@ jobs:
         run: |
           python3 -c "import kiss_matcher; print('imported kiss_matcher OK')"
 
+  # AppleClang ships without OpenMP, so the macOS jobs route the C++ build
+  # through Homebrew LLVM clang. We only test the Python versions where
+  # the runtime tail (viser/lxml) has prebuilt wheels for arm64.
+  python-build-macos:
+    name: Python Build (${{ matrix.os }}, Python ${{ matrix.python-version }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-13]
+        python-version: ['3.10', '3.12']
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install system dependencies
+        run: |
+          brew update
+          brew install cmake ninja eigen tbb lz4 flann llvm libomp ccache
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache-python-${{ matrix.os }}-${{ matrix.python-version }}
+          restore-keys: |
+            ${{ runner.os }}-ccache-python-${{ matrix.os }}
+            ${{ runner.os }}-ccache-python
+
+      - name: Cache pip packages
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/pip
+          key: ${{ runner.os }}-pip-${{ matrix.python-version }}-${{ hashFiles('**/pyproject.toml') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-${{ matrix.python-version }}-
+            ${{ runner.os }}-pip-
+
+      - name: Install Python build dependencies
+        run: |
+          python -m pip install --upgrade pip wheel setuptools
+          python -m pip install scikit-build-core pybind11 numpy
+
+      - name: Build and install Python package
+        run: |
+          LLVM_PREFIX="$(brew --prefix llvm)"
+          export CC="$LLVM_PREFIX/bin/clang"
+          export CXX="$LLVM_PREFIX/bin/clang++"
+          export CMAKE_ARGS="-DCMAKE_C_COMPILER=$CC -DCMAKE_CXX_COMPILER=$CXX -DUSE_SYSTEM_EIGEN3=ON -DUSE_SYSTEM_TBB=ON -DUSE_SYSTEM_ROBIN=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          python -m pip install -e python/ --verbose
+
+      - name: Test Python import and basic functionality
+        run: |
+          python -c "
+          import sys
+          print(f'Python version: {sys.version}')
+
+          try:
+              import kiss_matcher
+              print('Successfully imported kiss_matcher')
+
+              available_items = [x for x in dir(kiss_matcher) if not x.startswith('_')]
+              print(f'Available items: {available_items}')
+
+              if hasattr(kiss_matcher, '__version__'):
+                  print(f'Version: {kiss_matcher.__version__}')
+
+              print('Python package test completed successfully')
+          except ImportError as e:
+              print(f'Failed to import kiss_matcher: {e}')
+              sys.exit(1)
+          except Exception as e:
+              print(f'Error during testing: {e}')
+              sys.exit(1)
+          "
+
   summary:
     name: Python Build Summary
     runs-on: ubuntu-22.04
-    needs: [python-build, python-build-20-04]
+    needs: [python-build, python-build-20-04, python-build-macos]
     if: always()
 
     steps:
@@ -210,13 +292,13 @@ jobs:
           echo "## Python Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.python-build.result }}" = "success" ] && [ "${{ needs.python-build-20-04.result }}" = "success" ]; then
+          if [ "${{ needs.python-build.result }}" = "success" ] && [ "${{ needs.python-build-20-04.result }}" = "success" ] && [ "${{ needs.python-build-macos.result }}" = "success" ]; then
             echo "✅ All Python builds completed successfully" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Tested Configurations:" >> $GITHUB_STEP_SUMMARY
-            echo "- **Operating Systems**: Ubuntu 20.04 (container), Ubuntu 22.04, Ubuntu 24.04" >> $GITHUB_STEP_SUMMARY
-            echo "- **Python Versions**: 3.8, 3.9, 3.10, 3.11, 3.12" >> $GITHUB_STEP_SUMMARY
-            echo "- **Compilers**: GCC 9 (Ubuntu 20.04), GCC 11 (Ubuntu 22.04), GCC 13 (Ubuntu 24.04)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Operating Systems**: Ubuntu 20.04 (container), Ubuntu 22.04, Ubuntu 24.04, macOS 13 (Intel), macOS 14 (Apple Silicon)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Python Versions**: 3.8, 3.9, 3.10, 3.11, 3.12 (Linux); 3.10, 3.12 (macOS)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Compilers**: GCC 9 (Ubuntu 20.04), GCC 11 (Ubuntu 22.04), GCC 13 (Ubuntu 24.04), Homebrew LLVM clang (macOS)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Build Features:" >> $GITHUB_STEP_SUMMARY
             echo "- ✅ System dependencies (Eigen3, TBB, ROBIN)" >> $GITHUB_STEP_SUMMARY

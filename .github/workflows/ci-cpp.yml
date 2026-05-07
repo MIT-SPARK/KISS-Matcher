@@ -158,3 +158,52 @@ jobs:
 
       - name: Build C++ Core
         run: cmake --build build --config Release --parallel
+
+  # AppleClang ships without OpenMP, so the macOS jobs use Homebrew LLVM
+  # clang. ROBIN is fetched (USE_SYSTEM_ROBIN=OFF) because it is not
+  # packaged on Homebrew.
+  cpp-build-macos:
+    name: C++ Build (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-14, macos-13]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          brew update
+          brew install cmake ninja eigen tbb lz4 flann llvm libomp ccache
+
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1.2
+        with:
+          key: ${{ runner.os }}-ccache-cpp-${{ matrix.os }}
+          restore-keys: ${{ runner.os }}-ccache-cpp
+
+      - name: Configure CMake
+        run: |
+          LLVM_PREFIX="$(brew --prefix llvm)"
+          export CC="$LLVM_PREFIX/bin/clang"
+          export CXX="$LLVM_PREFIX/bin/clang++"
+          cmake -S cpp/kiss_matcher \
+                -B build \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER="$CC" \
+                -DCMAKE_CXX_COMPILER="$CXX" \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DUSE_CCACHE=ON \
+                -DUSE_SYSTEM_EIGEN3=ON \
+                -DUSE_SYSTEM_TBB=ON \
+                -DUSE_SYSTEM_ROBIN=OFF
+
+      - name: Build C++ Core
+        run: cmake --build build --config Release --parallel
