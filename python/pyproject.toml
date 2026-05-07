@@ -38,3 +38,15 @@ dependencies = [
 
 [tool.scikit-build]
 wheel.packages = ["kiss_matcher"]
+# python/CMakeLists.txt's out-of-tree fetch path (used when pip installs
+# from sdist / PyPI without the cpp/ tree alongside) relies on
+# `FetchContent_Declare(... SOURCE_SUBDIR ...)`, which requires CMake 3.18+.
+# Ubuntu 20.04 ships CMake 3.16, so ask scikit-build-core to provision a
+# newer cmake via the `cmake` PyPI wheel when the system cmake is too old.
+#
+# We pin below 4.0 because ROBIN downloads PMC, which has
+# `cmake_minimum_required(VERSION 2.x)` and is built via a separate
+# `DownloadProject` cmake invocation that doesn't inherit
+# `CMAKE_POLICY_VERSION_MINIMUM` from the parent. CMake 4.x hard-errors
+# on the legacy minimum, so we stay on 3.x until PMC modernizes.
+cmake.version = ">=3.18,<4"

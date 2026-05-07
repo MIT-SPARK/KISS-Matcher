@@ -152,10 +152,56 @@ jobs:
             !python/build/**/*.obj
             !python/build/**/CMakeFiles/
 
+  # Ubuntu 20.04 lives in a container (the GitHub-hosted 20.04 runner is
+  # gone). We only validate the build itself with the system Python 3.8;
+  # the runtime deps are skipped because some of them (lxml via viser)
+  # need libxml2/libxslt headers that we don't want to spend CI minutes on.
+  python-build-20-04:
+    name: Python Build (ubuntu-20.04 container, Python 3.8)
+    runs-on: ubuntu-22.04
+    container:
+      image: ubuntu:20.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates \
+            gcc \
+            g++ \
+            build-essential \
+            libeigen3-dev \
+            python3 \
+            python3-pip \
+            python3-dev \
+            cmake \
+            git \
+            ninja-build \
+            libflann-dev \
+            libtbb-dev \
+            liblz4-dev \
+            ccache
+
+      - name: Build and install Python package (no runtime deps)
+        run: |
+          export CMAKE_ARGS="-DUSE_SYSTEM_EIGEN3=ON -DUSE_SYSTEM_TBB=ON -DUSE_SYSTEM_ROBIN=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache"
+          python3 -m pip install --upgrade pip
+          python3 -m pip install -e python/ --no-deps --verbose
+
+      - name: Smoke-test import
+        run: |
+          python3 -c "import kiss_matcher; print('imported kiss_matcher OK')"
+
   summary:
     name: Python Build Summary
     runs-on: ubuntu-22.04
-    needs: [python-build]
+    needs: [python-build, python-build-20-04]
     if: always()
 
     steps:
@@ -164,13 +210,13 @@ jobs:
           echo "## Python Build Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
 
-          if [ "${{ needs.python-build.result }}" = "success" ]; then
+          if [ "${{ needs.python-build.result }}" = "success" ] && [ "${{ needs.python-build-20-04.result }}" = "success" ]; then
             echo "✅ All Python builds completed successfully" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Tested Configurations:" >> $GITHUB_STEP_SUMMARY
-            echo "- **Operating Systems**: Ubuntu 22.04, Ubuntu 24.04" >> $GITHUB_STEP_SUMMARY
+            echo "- **Operating Systems**: Ubuntu 20.04 (container), Ubuntu 22.04, Ubuntu 24.04" >> $GITHUB_STEP_SUMMARY
             echo "- **Python Versions**: 3.8, 3.9, 3.10, 3.11, 3.12" >> $GITHUB_STEP_SUMMARY
-            echo "- **Compilers**: GCC 11 (Ubuntu 22.04), GCC 13 (Ubuntu 24.04)" >> $GITHUB_STEP_SUMMARY
+            echo "- **Compilers**: GCC 9 (Ubuntu 20.04), GCC 11 (Ubuntu 22.04), GCC 13 (Ubuntu 24.04)" >> $GITHUB_STEP_SUMMARY
             echo "" >> $GITHUB_STEP_SUMMARY
             echo "### Build Features:" >> $GITHUB_STEP_SUMMARY
             echo "- ✅ System dependencies (Eigen3, TBB, ROBIN)" >> $GITHUB_STEP_SUMMARY

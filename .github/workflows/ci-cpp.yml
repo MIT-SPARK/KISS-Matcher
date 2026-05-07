@@ -110,3 +110,51 @@ jobs:
             !build/**/*.o
             !build/**/*.obj
             !build/**/CMakeFiles/
+
+  # GitHub deprecated the `ubuntu-20.04` runner, but plenty of researchers
+  # still develop on Ubuntu 20.04. We exercise that toolchain (CMake 3.16,
+  # GCC 9, Python 3.8) inside a container running on a 22.04 host.
+  cpp-build-20-04:
+    name: C++ Build (ubuntu-20.04 container)
+    runs-on: ubuntu-22.04
+    container:
+      image: ubuntu:20.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends \
+            ca-certificates \
+            gcc \
+            g++ \
+            build-essential \
+            libeigen3-dev \
+            cmake \
+            git \
+            ninja-build \
+            libflann-dev \
+            libtbb-dev \
+            liblz4-dev \
+            ccache
+
+      - name: Configure CMake
+        run: |
+          cmake -S cpp/kiss_matcher \
+                -B build \
+                -G Ninja \
+                -DCMAKE_BUILD_TYPE=Release \
+                -DCMAKE_C_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_CXX_COMPILER_LAUNCHER=ccache \
+                -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+                -DUSE_SYSTEM_EIGEN3=ON \
+                -DUSE_SYSTEM_TBB=ON \
+                -DUSE_SYSTEM_ROBIN=ON
+
+      - name: Build C++ Core
+        run: cmake --build build --config Release --parallel
