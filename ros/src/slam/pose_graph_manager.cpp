@@ -382,9 +382,10 @@ void PoseGraphManager::performRegistration() {
   loop_idx_pair_queue_.pop();
 
   const RegOutput &reg_output = loop_closure_->performLoopClosure(keyframes_, query_idx, match_idx);
-  need_lc_cloud_vis_update_   = true;
+  //need_lc_cloud_vis_update_   = true;
 
   if (reg_output.is_valid_) {
+    need_lc_cloud_vis_update_   = true;
     RCLCPP_INFO(this->get_logger(), "LC accepted. Overlapness: %.3f", reg_output.overlapness_);
     gtsam::Pose3 pose_from = eigenToGtsam(reg_output.pose_ * keyframes_[query_idx].pose_corrected_);
     gtsam::Pose3 pose_to   = eigenToGtsam(keyframes_[match_idx].pose_corrected_);
