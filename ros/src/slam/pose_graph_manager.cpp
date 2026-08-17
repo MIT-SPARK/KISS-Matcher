@@ -274,6 +274,10 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
           keyframes_[i].pose_corrected_ = gtsamToEigen(corrected_esti_.at<gtsam::Pose3>(i));
         }
         loop_closure_added_ = false;
+        // The loop correction has been applied to the keyframe poses only now.
+        // Mark the map dirty so buildMap() fully rebuilds with corrected poses
+        // instead of leaving stale-pose points behind (causing duplicated features).
+        need_map_update_ = true;
       }
 
       const auto t_total = total_timer.toc();
@@ -410,7 +414,6 @@ void PoseGraphManager::performRegistration() {
     vis_loop_edges_.emplace_back(query_idx, match_idx);
     succeeded_query_idx_   = query_idx;
     loop_closure_added_    = true;
-    need_map_update_       = true;
     need_graph_vis_update_ = true;
 
     // --------------------------------------------------
