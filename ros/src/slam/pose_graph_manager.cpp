@@ -17,6 +17,8 @@ PoseGraphManager::PoseGraphManager(const rclcpp::NodeOptions &options)
 
   map_frame_             = declare_parameter<std::string>("map_frame", "map");
   base_frame_            = declare_parameter<std::string>("base_frame", "base");
+  odom_frame_            = declare_parameter<std::string>("odom_frame", "");
+  publish_correction_to_odom_ = declare_parameter<bool>("publish_correction_to_odom", false);
   loop_pub_hz            = declare_parameter<double>("loop_pub_hz", 0.1);
   loop_detector_hz       = declare_parameter<double>("loop_detector_hz", 1.0);
   loop_nnsearch_hz       = declare_parameter<double>("loop_nnsearch_hz", 1.0);
@@ -194,6 +196,11 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
 
   visualizeCurrentData(current_odom, odom_msg->header.stamp, scan_msg->header.frame_id);
 
+  if (odom_frame_.empty() && !odom_msg->header.frame_id.empty()) {
+    odom_frame_ = odom_msg->header.frame_id;
+    RCLCPP_INFO(this->get_logger(), "odom_frame captured: %s", odom_frame_.c_str());
+  }
+
   if (!is_initialized_) {
     keyframes_.push_back(current_frame_);
     appendKeyframePose(current_frame_);
@@ -267,6 +274,10 @@ void PoseGraphManager::callbackNode(const nav_msgs::msg::Odometry::ConstSharedPt
           keyframes_[i].pose_corrected_ = gtsamToEigen(corrected_esti_.at<gtsam::Pose3>(i));
         }
         loop_closure_added_ = false;
+        // The loop correction has been applied to the keyframe poses only now.
+        // Mark the map dirty so buildMap() fully rebuilds with corrected poses
+        // instead of leaving stale-pose points behind (causing duplicated features).
+        need_map_update_ = true;
       }
 
       const auto t_total = total_timer.toc();
@@ -403,7 +414,6 @@ void PoseGraphManager::performRegistration() {
     vis_loop_edges_.emplace_back(query_idx, match_idx);
     succeeded_query_idx_   = query_idx;
     loop_closure_added_    = true;
-    need_map_update_       = true;
     need_graph_vis_update_ = true;
 
     // --------------------------------------------------
@@ -452,15 +462,23 @@ void PoseGraphManager::visualizeCurrentData(const Eigen::Matrix4d &current_odom,
     geometry_msgs::msg::TransformStamped transform_stamped;
     transform_stamped.header.stamp    = timestamp;
     transform_stamped.header.frame_id = map_frame_;
-    transform_stamped.child_frame_id  = base_frame_.empty() ? frame_id : base_frame_;
-    Eigen::Quaterniond q(current_frame_.pose_corrected_.block<3, 3>(0, 0));
-    transform_stamped.transform.translation.x = current_frame_.pose_corrected_(0, 3);
-    transform_stamped.transform.translation.y = current_frame_.pose_corrected_(1, 3);
-    transform_stamped.transform.translation.z = current_frame_.pose_corrected_(2, 3);
-    transform_stamped.transform.rotation.x    = q.x();
-    transform_stamped.transform.rotation.y    = q.y();
-    transform_stamped.transform.rotation.z    = q.z();
-    transform_stamped.transform.rotation.w    = q.w();
+
+    Eigen::Matrix4d tf_mat = current_frame_.pose_corrected_;
+    std::string child_id = base_frame_.empty() ? frame_id : base_frame_;
+    if (publish_correction_to_odom_) {
+      tf_mat   = current_frame_.pose_corrected_ * current_odom.inverse();
+      child_id = odom_frame_;
+    }
+
+    Eigen::Quaterniond q(tf_mat.block<3, 3>(0, 0));
+    transform_stamped.child_frame_id                  = child_id;
+    transform_stamped.transform.translation.x         = tf_mat(0, 3);
+    transform_stamped.transform.translation.y         = tf_mat(1, 3);
+    transform_stamped.transform.translation.z         = tf_mat(2, 3);
+    transform_stamped.transform.rotation.x            = q.x();
+    transform_stamped.transform.rotation.y            = q.y();
+    transform_stamped.transform.rotation.z            = q.z();
+    transform_stamped.transform.rotation.w            = q.w();
     tf_broadcaster_->sendTransform(transform_stamped);
   }
 

@@ -7,10 +7,12 @@ launch:
   - arg: {name: rviz_path,  default: $(find-pkg-share kiss_matcher_ros)/rviz/kiss_matcher_sam.rviz}
   - arg: {name: config_path,   default: $(find-pkg-share kiss_matcher_ros)/config/slam_config.yaml}
 
-  - arg: {name: map_frame , default: 'map' , description: Global map frame ID}
-  - arg: {name: base_frame, default: 'base', description: Robot's base frame ID}
+  - arg: {name: map_frame , default: 'wamv_rise/map' , description: Global map frame ID}
+  - arg: {name: base_frame, default: 'wamv_rise/base_link', description: Robot's base frame ID}
+  - arg: {name: odom_frame, default: 'wamv_rise/odom', description: Odom frame ID (only used when publish_correction_to_odom=true)}
+  - arg: {name: publish_correction_to_odom, default: 'true', description: If true broadcast map->odom instead of map->base_link}
 
-  - arg: {name: odom_topic, default: "/odometry"}
+  - arg: {name: odom_topic, default: "/wamv_rise/fast_lio/odometry"}
   - arg: {name: scan_topic, default: "/cloud_registered"}
 
   - node:
@@ -27,10 +29,16 @@ launch:
         - { from: '/odom',   to: $(var odom_topic) }
 
       param:
+        - name: use_sim_time
+          value: true
         - name: "map_frame"
           value: "$(var map_frame)"
         - name: "base_frame"
-          value: "$$(var base_frame)"
+          value: "$(var base_frame)"
+        - name: "odom_frame"
+          value: "$(var odom_frame)"
+        - name: "publish_correction_to_odom"
+          value: "$(var publish_correction_to_odom)"
 
         - from: $(var config_path)
 

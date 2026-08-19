@@ -104,6 +104,8 @@ class PoseGraphManager : public rclcpp::Node {
 
   std::string map_frame_;
   std::string base_frame_;
+  std::string odom_frame_;
+  bool publish_correction_to_odom_ = false;
   std::string package_path_;
   std::string seq_name_;
 
