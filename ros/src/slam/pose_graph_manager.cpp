@@ -353,7 +353,9 @@ void PoseGraphManager::detectLoopClosureByLoopDetector() {
   const auto &loop_idx_pairs = loop_detector_->fetchLoopCandidates(query, keyframes_);
 
   for (const auto &loop_candidate : loop_idx_pairs) {
-    loop_idx_pair_queue_.push(loop_candidate);
+    if (queued_loop_idx_pairs_.insert(loop_candidate).second) {
+      loop_idx_pair_queue_.push(loop_candidate);
+    }
   }
 
   const auto t_ld = ld_timer.toc();
@@ -369,7 +371,9 @@ void PoseGraphManager::detectLoopClosureByNNSearch() {
   const auto &loop_idx_pairs = loop_closure_->fetchLoopCandidates(query, keyframes_);
 
   for (const auto &loop_candidate : loop_idx_pairs) {
-    loop_idx_pair_queue_.push(loop_candidate);
+    if (queued_loop_idx_pairs_.insert(loop_candidate).second) {
+      loop_idx_pair_queue_.push(loop_candidate);
+    }
   }
 }
 

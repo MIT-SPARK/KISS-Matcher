@@ -13,6 +13,7 @@
 #include <memory>
 #include <mutex>
 #include <queue>
+#include <set>
 #include <string>
 #include <tuple>
 #include <utility>
@@ -137,10 +138,13 @@ class PoseGraphManager : public rclcpp::Node {
   double loop_detection_radius_;  // Only for visualization
   int sub_key_num_;
 
-  size_t succeeded_query_idx_;
+  size_t succeeded_query_idx_ = 0;
   std::vector<std::pair<size_t, size_t>> vis_loop_edges_;
   // pose_graph_tools_msgs::msg::PoseGraph loop_msgs_;
   std::queue<LoopIdxPair> loop_idx_pair_queue_;
+  // Both the loop detector and the NN search can propose the same pair;
+  // it should be registered (and added to the graph) only once.
+  std::set<LoopIdxPair> queued_loop_idx_pairs_;
 
   kiss_matcher::TicToc timer_;
 
