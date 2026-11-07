@@ -9,6 +9,7 @@
 #include "kiss_matcher/ROBINMatching.hpp"
 
 #include <algorithm>
+#include <memory>
 #include <tuple>
 
 #include <Eigen/Core>
@@ -295,15 +296,15 @@ void ROBINMatching::applyOutlierPruning(const std::vector<std::pair<int, int>>& 
       tgt_robin.col(i) = pointcloud_[fj_][corres[i].second].cast<double>();
     }
 
-    auto* g = robin::Make3dRegInvGraph(src_robin, tgt_robin, noise_bound_);
+    std::unique_ptr<robin::IGraph> g(robin::Make3dRegInvGraph(src_robin, tgt_robin, noise_bound_));
 
     const auto& filtered_indices = [&]() {
       // NOTE(hlim): Just use max core mode.
       // `max_clique` not only took more time but also showed slightly worse performance.
       if (robin_mode == "max_core") {
-        return robin::FindInlierStructure(g, robin::InlierGraphStructure::MAX_CORE);
+        return robin::FindInlierStructure(g.get(), robin::InlierGraphStructure::MAX_CORE);
       } else if (robin_mode == "max_clique") {
-        return robin::FindInlierStructure(g, robin::InlierGraphStructure::MAX_CLIQUE);
+        return robin::FindInlierStructure(g.get(), robin::InlierGraphStructure::MAX_CLIQUE);
       } else {
         throw std::runtime_error("Something's wrong!");
       }
@@ -346,15 +347,15 @@ std::vector<size_t> ROBINMatching::applyOutlierPruning(
     tgt_robin.col(i) = tgt_matched[i].cast<double>();
   }
 
-  auto* g = robin::Make3dRegInvGraph(src_robin, tgt_robin, noise_bound_);
+  std::unique_ptr<robin::IGraph> g(robin::Make3dRegInvGraph(src_robin, tgt_robin, noise_bound_));
 
   const auto& filtered_indices = [&]() {
     // NOTE(hlim): Just use max core mode.
     // `max_clique` not only took more time but also showed slightly worse performance.
     if (robin_mode == "max_core") {
-      return robin::FindInlierStructure(g, robin::InlierGraphStructure::MAX_CORE);
+      return robin::FindInlierStructure(g.get(), robin::InlierGraphStructure::MAX_CORE);
     } else if (robin_mode == "max_clique") {
-      return robin::FindInlierStructure(g, robin::InlierGraphStructure::MAX_CLIQUE);
+      return robin::FindInlierStructure(g.get(), robin::InlierGraphStructure::MAX_CLIQUE);
     } else {
       throw std::runtime_error("Something's wrong!");
     }
